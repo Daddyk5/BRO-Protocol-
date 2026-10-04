@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <g id="fist-left">
+    <rect x="36" y="214" width="60" height="84" rx="16" fill="#FFFFFF"/>
+    <rect x="80" y="186" width="112" height="140" rx="34" fill="#FFFFFF"/>
+    <rect x="148" y="188" width="88" height="31" rx="15.5" fill="#FFFFFF"/>
+    <rect x="148" y="223" width="88" height="31" rx="15.5" fill="#FFFFFF"/>
+    <rect x="148" y="258" width="88" height="31" rx="15.5" fill="#FFFFFF"/>
+    <rect x="148" y="293" width="88" height="31" rx="15.5" fill="#FFFFFF"/>
+    <rect x="98" y="168" width="96" height="36" rx="18" fill="#FFFFFF"/>
+  </g>
+  <g id="fist-right" transform="translate(512 0) scale(-1 1)">
+    <rect x="36" y="214" width="60" height="84" rx="16" fill="#FFFFFF"/>
+    <rect x="80" y="186" width="112" height="140" rx="34" fill="#FFFFFF"/>
+    <rect x="148" y="188" width="88" height="31" rx="15.5" fill="#FFFFFF"/>
+    <rect x="148" y="223" width="88" height="31" rx="15.5" fill="#FFFFFF"/>
+    <rect x="148" y="258" width="88" height="31" rx="15.5" fill="#FFFFFF"/>
+    <rect x="148" y="293" width="88" height="31" rx="15.5" fill="#FFFFFF"/>
+    <rect x="98" y="168" width="96" height="36" rx="18" fill="#FFFFFF"/>
+  </g>
+  <g id="spark" fill="#FFFFFF">
+    <polygon points="256.0,186.0 264.4,235.7 292.8,219.2 276.3,247.6 326.0,256.0 276.3,264.4 292.8,292.8 264.4,276.3 256.0,326.0 247.6,276.3 219.2,292.8 235.7,264.4 186.0,256.0 235.7,247.6 219.2,219.2 247.6,235.7"/>
+    <rect x="252" y="132" width="8" height="34" rx="4"/>
+    <rect x="252" y="346" width="8" height="34" rx="4"/>
+    <rect x="300" y="160" width="8" height="26" rx="4" transform="rotate(35 304 173)"/>
+    <rect x="204" y="326" width="8" height="26" rx="4" transform="rotate(35 208 339)"/>
+  </g>
+</svg>

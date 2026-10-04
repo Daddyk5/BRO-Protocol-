@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=380" />
+    <title>Bro Protocol</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap"
+    />
+  </head>
+  <body>
+    <main class="popup" id="app">
+      <header class="popup__header">
+        <span class="popup__logo" id="logo" role="img" aria-label="Bro Protocol logo"></span>
+        <div>
+          <h1 class="bro-heading popup__title">BRO PROTOCOL</h1>
+          <p class="bro-caption">Say less. Say it right.</p>
+        </div>
+      </header>
+
+      <section class="bro-modes" id="modes" aria-label="Mode"></section>
+
+      <label class="popup__label" for="context">Context</label>
+      <textarea
+        id="context"
+        class="bro-textarea popup__context"
+        rows="4"
+        maxlength="5000"
+        placeholder="Paste her bio / her message / the chat here"
+      ></textarea>
+
+      <div class="bro-tone">
+        <span>Chill</span>
+        <input id="tone" class="bro-range" type="range" min="0" max="1" step="0.01" aria-label="Tone" />
+        <span>Bold</span>
+      </div>
+      <div class="popup__row">
+        <span class="bro-caption" id="tone-label" aria-live="polite"></span>
+        <label class="popup__lang">
+          <span class="bro-caption">Language</span>
+          <select id="language" class="popup__select" aria-label="Language">
+            <option value="english">English</option>
+            <option value="taglish">Taglish</option>
+          </select>
+        </label>
+      </div>
+
+      <button id="generate" class="bro-btn bro-btn--primary" type="button">GENERATE</button>
+
+      <section class="popup__result" id="result" aria-live="polite"></section>
+    </main>
+    <script type="module" src="./src/popup/main.ts"></script>
+  </body>
+</html>

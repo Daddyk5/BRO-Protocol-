@@ -1,0 +1,14 @@
+**/node_modules
+**/lib
+**/dist
+**/.env
+server/src/core
+build
+.dart_tool
+android
+ios
+assets
+extension
+tool
+test
+.idea

@@ -1,0 +1,22 @@
+{
+  "name": "bro-protocol-server",
+  "private": true,
+  "description": "BRO PROTOCOL self-hosted backend (Docker): same generateReply contract as the Cloud Function",
+  "main": "lib/server.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "sync-core": "node scripts/sync-core.mjs",
+    "build": "npm run sync-core && tsc",
+    "start": "node lib/server.js",
+    "test": "npm run build && node --test \"lib/**/*.test.js\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,32 @@
+# Builds an unsigned iOS .ipa on Codemagic's macOS machines, so the app can be
+# built without a Mac. Sign and install it on a device with Sideloadly (Windows).
+#
+# Set BRO_BACKEND_URL in Codemagic (Environment variables, group "bro_backend")
+# to an address the phone can reach, e.g. http://192.168.1.50:8080.
+workflows:
+  ios-unsigned:
+    name: iOS unsigned IPA
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - bro_backend
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Install pods
+        script: cd ios && pod install --repo-update
+      - name: Build iOS (no codesign)
+        script: |
+          flutter build ios --release --no-codesign \
+            --dart-define=BRO_BACKEND_URL=$BRO_BACKEND_URL
+      - name: Package IPA
+        script: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -qr bro_protocol.ipa Payload
+    artifacts:
+      - bro_protocol.ipa

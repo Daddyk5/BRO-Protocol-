@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Bro Protocol",
+  "short_name": "Bro Protocol",
+  "version": "1.0.0",
+  "description": "Say less. Say it right. An AI wingman that drafts one confident, respectful reply. You always hit send yourself.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Bro Protocol",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.messenger.com/*", "https://www.facebook.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["activeTab", "storage", "scripting", "contextMenus"],
+  "host_permissions": ["https://*.messenger.com/*", "https://*.facebook.com/*"],
+  "minimum_chrome_version": "120"
+}

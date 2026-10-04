@@ -1,0 +1,14 @@
+# Self-hosted BRO PROTOCOL backend.
+#   cp server/.env.example server/.env   # add ANTHROPIC_API_KEY
+#   docker compose up -d --build
+#   curl http://localhost:8080/healthz
+services:
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    image: bro-protocol-api:latest
+    env_file: server/.env
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

@@ -1,0 +1,17 @@
+{
+  "name": "bro-protocol-extension",
+  "private": true,
+  "version": "1.0.0",
+  "description": "BRO PROTOCOL Chrome extension (Manifest V3)",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build && vite build --config vite.content.config.ts",
+    "watch": "vite build --watch"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.3.4",
+    "typescript": "5.9.3",
+    "vite": "8.3.2"
+  }
+}

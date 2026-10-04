@@ -1,0 +1,12 @@
+{
+  "name": "bro-protocol-tool",
+  "private": true,
+  "type": "module",
+  "description": "Renders every PNG icon (launcher, splash, Chrome extension) from assets/logo/bro_logo.svg",
+  "scripts": {
+    "icons": "node generate_icons.mjs"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "2.6.2"
+  }
+}

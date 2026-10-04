@@ -1,0 +1,293 @@
+/* BRO PROTOCOL design tokens: mirror of lib/core/theme/app_colors.dart. */
+:root,
+:host {
+  --bro-bg: #0b0d12;
+  --bro-surface: #151922;
+  --bro-surface2: #1e2430;
+  --bro-border: #2a3140;
+  --bro-text: #f1f3f7;
+  --bro-text-muted: #8a93a6;
+  --bro-red: #e63946;
+  --bro-blue: #1d4ed8;
+  --bro-white: #ffffff;
+  --bro-gradient: linear-gradient(135deg, var(--bro-red), var(--bro-blue));
+  --bro-glow: -6px 8px 24px rgba(230, 57, 70, 0.35), 6px 8px 24px rgba(29, 78, 216, 0.35);
+  --bro-radius: 16px;
+  --bro-ease: cubic-bezier(0, 0, 0.58, 1);
+  --bro-fast: 200ms;
+  --bro-normal: 250ms;
+  --bro-font-heading: "Bebas Neue", Impact, "Arial Narrow Bold", sans-serif;
+  --bro-font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.bro-heading {
+  font-family: var(--bro-font-heading);
+  letter-spacing: 0.06em;
+  font-weight: 400;
+  line-height: 1.05;
+  margin: 0;
+  color: var(--bro-text);
+}
+
+.bro-caption {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--bro-text-muted);
+  margin: 0;
+}
+
+.bro-btn {
+  font-family: var(--bro-font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bro-text);
+  background: transparent;
+  border: 1px solid var(--bro-border);
+  border-radius: 999px;
+  padding: 9px 14px;
+  min-height: 36px;
+  cursor: pointer;
+  transition: transform var(--bro-fast) var(--bro-ease), background var(--bro-normal) var(--bro-ease),
+    border-color var(--bro-normal) var(--bro-ease), opacity var(--bro-normal) var(--bro-ease);
+}
+
+.bro-btn:hover {
+  background: var(--bro-surface2);
+}
+
+.bro-btn:active {
+  transform: scale(0.97);
+}
+
+.bro-btn:focus-visible,
+.bro-mode:focus-visible,
+.bro-textarea:focus-visible,
+.bro-range:focus-visible {
+  outline: 2px solid var(--bro-blue);
+  outline-offset: 2px;
+}
+
+.bro-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.bro-btn--primary {
+  font-family: var(--bro-font-heading);
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  color: var(--bro-white);
+  background: var(--bro-gradient);
+  border: none;
+  box-shadow: var(--bro-glow);
+  padding: 12px 18px;
+  min-height: 46px;
+}
+
+.bro-btn--primary:hover {
+  background: var(--bro-gradient);
+  filter: brightness(1.08);
+}
+
+.bro-btn--primary[disabled] {
+  box-shadow: none;
+}
+
+.bro-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.bro-mode {
+  text-align: left;
+  font-family: var(--bro-font-body);
+  color: var(--bro-text);
+  background: var(--bro-surface);
+  border: 1px solid var(--bro-border);
+  border-radius: var(--bro-radius);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: transform var(--bro-fast) var(--bro-ease), border-color var(--bro-normal) var(--bro-ease),
+    background var(--bro-normal) var(--bro-ease);
+}
+
+.bro-mode:active {
+  transform: scale(0.97);
+}
+
+.bro-mode[aria-pressed="true"] {
+  border-color: var(--bro-red);
+  background: rgba(230, 57, 70, 0.12);
+}
+
+.bro-mode__title {
+  display: block;
+  font-family: var(--bro-font-heading);
+  font-size: 18px;
+  letter-spacing: 0.06em;
+}
+
+.bro-mode__desc {
+  display: block;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--bro-text-muted);
+  margin-top: 2px;
+}
+
+.bro-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  font-family: var(--bro-font-body);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--bro-text);
+  background: var(--bro-surface);
+  border: 1px solid var(--bro-border);
+  border-radius: var(--bro-radius);
+  padding: 10px 12px;
+}
+
+.bro-textarea::placeholder {
+  color: var(--bro-text-muted);
+}
+
+.bro-tone {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--bro-text-muted);
+}
+
+.bro-range {
+  width: 100%;
+  accent-color: var(--bro-red);
+}
+
+.bro-bubble {
+  align-self: flex-end;
+  max-width: 88%;
+  color: var(--bro-white);
+  background: var(--bro-gradient);
+  box-shadow: var(--bro-glow);
+  border-radius: 20px 20px 6px 20px;
+  padding: 10px 14px;
+  font-family: var(--bro-font-body);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  user-select: text;
+  animation: bro-pop var(--bro-normal) var(--bro-ease);
+}
+
+.bro-error {
+  font-size: 13px;
+  color: #ff8f97;
+  background: rgba(230, 57, 70, 0.1);
+  border: 1px solid rgba(230, 57, 70, 0.35);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
+@keyframes bro-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Mini fist-bump loader */
+.bro-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.bro-loader__stage {
+  position: relative;
+  width: var(--bro-loader-size, 96px);
+  height: calc(var(--bro-loader-size, 96px) * 0.6);
+}
+
+.bro-loader__fist,
+.bro-loader__spark {
+  position: absolute;
+  top: calc(var(--bro-loader-size, 96px) * -0.2);
+  width: calc(var(--bro-loader-size, 96px) / 2);
+  height: var(--bro-loader-size, 96px);
+}
+
+.bro-loader__fist svg,
+.bro-loader__spark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.bro-loader__fist--red {
+  left: 0;
+  animation: bro-bump-left 1s var(--bro-ease) infinite;
+}
+
+.bro-loader__fist--blue {
+  left: 50%;
+  animation: bro-bump-right 1s var(--bro-ease) infinite;
+}
+
+.bro-loader__spark {
+  left: 25%;
+  animation: bro-spark 1s var(--bro-ease) infinite;
+}
+
+@keyframes bro-bump-left {
+  0%, 100% { transform: translateX(-16%); }
+  40%, 55% { transform: translateX(0); }
+}
+
+@keyframes bro-bump-right {
+  0%, 100% { transform: translateX(16%); }
+  40%, 55% { transform: translateX(0); }
+}
+
+@keyframes bro-spark {
+  0%, 38% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.15); opacity: 1; }
+  70%, 100% { transform: scale(0); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bro-loader__fist--red,
+  .bro-loader__fist--blue {
+    animation: none;
+    transform: none;
+  }
+  .bro-loader__spark {
+    animation: bro-fade 1.6s ease-in-out infinite alternate;
+    transform: none;
+  }
+  .bro-bubble {
+    animation: none;
+  }
+  .bro-btn,
+  .bro-mode {
+    transition: none;
+  }
+}
+
+@keyframes bro-fade {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
