@@ -1,0 +1,35 @@
+{
+    "name": "Bro Protocol",
+    "short_name": "Bro Protocol",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#0B0D12",
+    "theme_color": "#0B0D12",
+    "description": "An AI wingman that writes dating-chat replies. Say less. Say it right.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

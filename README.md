@@ -6,7 +6,7 @@ An AI wingman that writes one dating-chat reply at a time: confident, warm, witt
 
 | Part | Folder | Stack |
 | --- | --- | --- |
-| Mobile app | `lib/`, `android/`, `ios/` | Flutter 3.47, Riverpod, go_router, dio, Hive |
+| App (Android, iOS, web) | `lib/`, `android/`, `ios/`, `web/` | Flutter 3.47, Riverpod, go_router, dio, Hive |
 | Backend (pick one) | `server/` or `functions/` | Docker (Node) or Firebase Cloud Functions v2. Both TypeScript and Claude API, sharing the same logic |
 | Chrome extension | `extension/` | Manifest V3, TypeScript, Vite |
 
@@ -53,6 +53,15 @@ flutter run --dart-define=BRO_BACKEND_URL=http://192.168.x.x:8080
 ```
 
 If the server sets `CLIENT_TOKEN`, add `--dart-define=BRO_CLIENT_TOKEN=<token>`. When `BRO_BACKEND_URL` is set, the app skips Firebase entirely.
+
+**Or run it in the browser** (no phone needed):
+
+```bash
+flutter run -d chrome --dart-define=BRO_BACKEND_URL=http://localhost:8080   # or -d edge
+flutter build web --release --dart-define=BRO_BACKEND_URL=https://<your-backend>   # output: build/web
+```
+
+On web, screenshot scanning is hidden (ML Kit is mobile-only) and the share sheet isn't available. Everything else works the same. A deployed site served over HTTPS needs an HTTPS backend URL, because browsers block `http://` calls from `https://` pages.
 
 To reach the backend from a phone, allow port 8080 through Windows Firewall:
 

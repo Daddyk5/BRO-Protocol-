@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -117,17 +118,20 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: _scanning ? null : _scan,
-                icon: _scanning
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.document_scanner_outlined, size: 20),
-                label: Text(_scanning ? 'Reading…' : 'Scan screenshot'),
+            // ML Kit OCR has no web implementation.
+            if (!kIsWeb) ...[
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _scanning ? null : _scan,
+                  icon: _scanning
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.document_scanner_outlined, size: 20),
+                  label: Text(_scanning ? 'Reading…' : 'Scan screenshot'),
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: 24),
             _ToneSlider(value: state.tone, onChanged: controller.setTone),
             const SizedBox(height: 28),
