@@ -126,6 +126,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onSelectionChanged: (selection) => notifier.setLanguage(selection.first),
               ),
             ),
+            const _SectionHeader('COACHING'),
+            Card(
+              child: SwitchListTile(
+                secondary: const Icon(Icons.lightbulb_outline_rounded),
+                title: const Text('Show why it works'),
+                subtitle: const Text('A one-line tip under each reply'),
+                value: settings.showTips,
+                onChanged: notifier.setShowTips,
+              ),
+            ),
             const _SectionHeader('DATA'),
             Card(
               child: ListTile(

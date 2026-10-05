@@ -14,6 +14,17 @@ const QUOTES = /["“”„‟«»]/g;
 // Single quotes only when they wrap the whole reply, so apostrophes survive.
 const WRAPPING_SINGLE = /^['‘’‚‛](.*)['‘’‚‛]$/s;
 
+/**
+ * Splits a completion written with the tip instruction into the message and
+ * the "WHY:" tip. Without a WHY line the whole text is the message.
+ */
+export function splitTip(raw: string): { message: string; tip?: string } {
+  const match = raw.match(/^([\s\S]*?)\n\s*\**WHY\**\s*:\s*([\s\S]*)$/i);
+  if (!match) return { message: raw };
+  const tip = limitSentences(match[2].replace(QUOTES, "").replace(/\s+/g, " ").trim(), 1).slice(0, 240);
+  return { message: match[1], ...(tip ? { tip } : {}) };
+}
+
 /** Strips quotation marks, collapses whitespace and keeps at most 2 sentences. */
 export function postProcess(raw: string): string {
   let text = raw.trim();

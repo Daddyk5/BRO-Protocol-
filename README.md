@@ -152,11 +152,12 @@ Open `chrome://extensions`, turn on Developer mode, click **Load unpacked**, and
 ## Features
 
 **Mobile app**
-- **Modes:** Opener, Banter, Move it off-app, Revive, Late Night (smooth, slow-burn flirting)
-- **Composer:** paste a chat or scan a screenshot (on-device OCR with ML Kit), then generate **3 options** (Chill, Balanced, Bold) or turn that off and pick one tone
-- **Result:** tap the option you like, then Copy, Regenerate or Share
+- **Modes:** Opener, Banter, Move it off-app, Revive, Late Night (smooth, slow-burn flirting), **Fix my draft** (paste what you were going to send, get it back sharper) and **Date ideas** (three date asks built from what she's mentioned: Low-key, Activity, Evening)
+- **Composer:** paste a chat or scan a screenshot (on-device OCR with ML Kit), pick who it's **for**, then generate **3 options** (Chill, Balanced, Bold) or turn that off and pick one tone
+- **Result:** tap the option you like, then Copy, Regenerate or Share. A **"Why it works"** tip explains each reply (turn it off in Settings)
+- **Matches:** save notes about each match (interests, plans, inside jokes). Pick her in the composer and replies can use one detail. Notes stay on the device and are only sent with that request
 - **History:** the last 20 replies, stored only on the device
-- **Settings:** default tone, language (English / Taglish), clear history
+- **Settings:** default tone, language (English / Taglish), tips on/off, clear history
 - **Android share:** in Messenger, Share a message to Bro Protocol and it opens in Banter
 
 **Extension**
@@ -169,15 +170,18 @@ Open `chrome://extensions`, turn on Developer mode, click **Load unpacked**, and
 `POST /generateReply` (Docker) or the `generateReply` callable (Firebase), using the same wire format:
 
 ```
-request  { data: { mode: "OPENER" | "BANTER" | "MOVE_OFF_APP" | "REVIVE" | "LATE_NIGHT",
+request  { data: { mode: "OPENER" | "BANTER" | "MOVE_OFF_APP" | "REVIVE" | "LATE_NIGHT"
+                         | "IMPROVE_DRAFT" | "DATE_IDEAS",
                    context: string (≤ 5000 chars), tone: 0..1,
                    language: "english" | "taglish", deviceId: string,
-                   count?: 1..3 } }
+                   count?: 1..3, tips?: boolean, notes?: string (≤ 1000 chars) } }
 response { result: { reply: string,
-                     replies: [{ label: "Chill" | "Balanced" | "Bold", tone: number, reply: string }] } }
+                     replies: [{ label: string, tone: number, reply: string, tip?: string }] } }
 ```
 
-- **Options:** `count: 3` writes Chill, Balanced and Bold replies in parallel (ignoring `tone`); `reply` is the Balanced one. With `count: 1` (the default), you get one reply at `tone`.
+- **Options:** `count: 3` writes Chill, Balanced and Bold replies in parallel (ignoring `tone`); `reply` is the Balanced one. In `DATE_IDEAS` the three options are date types (Low-key, Activity, Evening) at the caller's `tone` instead. With `count: 1` (the default), you get one reply at `tone`.
+- **Tips:** `tips: true` asks for a one-line "why this works" in the same model call, so it costs no extra request. Small local models sometimes skip it; the reply still comes back.
+- **Notes:** `notes` is added to the prompt as "Notes about her", and the model is told to use at most one detail.
 - **Rate limit:** 20 replies per hour per device, so a 3-option request uses 3. Docker saves the counts to a file; Firebase keeps them in Firestore.
 - **Auth:** Docker uses an optional shared `CLIENT_TOKEN`. Firebase requires an App Check token (app) or an anonymous Firebase Auth token (extension).
 - **Post-processing:** strips quotes, keeps at most 2 sentences, and regenerates once if a banned word appears (and fails if the retry still has one).

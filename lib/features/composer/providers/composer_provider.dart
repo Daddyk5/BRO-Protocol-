@@ -4,7 +4,13 @@ import '../../../core/constants/bro_mode.dart';
 import '../../settings/providers/settings_provider.dart';
 
 class ComposerState {
-  const ComposerState({required this.mode, required this.text, required this.tone, this.threeOptions = true});
+  const ComposerState({
+    required this.mode,
+    required this.text,
+    required this.tone,
+    this.threeOptions = true,
+    this.matchId,
+  });
 
   final BroMode mode;
   final String text;
@@ -13,6 +19,9 @@ class ComposerState {
   /// Write Chill / Balanced / Bold options at once instead of one reply at [tone].
   final bool threeOptions;
 
+  /// The match this draft is for; their notes go along with the request.
+  final String? matchId;
+
   bool get canGenerate => text.trim().isNotEmpty;
 
   ComposerState copyWith({BroMode? mode, String? text, double? tone, bool? threeOptions}) => ComposerState(
@@ -20,6 +29,7 @@ class ComposerState {
         text: text ?? this.text,
         tone: tone ?? this.tone,
         threeOptions: threeOptions ?? this.threeOptions,
+        matchId: matchId,
       );
 }
 
@@ -41,12 +51,21 @@ class ComposerController extends Notifier<ComposerState> {
 
   void setThreeOptions(bool value) => state = state.copyWith(threeOptions: value);
 
+  void setMatch(String? matchId) => state = ComposerState(
+        mode: state.mode,
+        text: state.text,
+        tone: state.tone,
+        threeOptions: state.threeOptions,
+        matchId: matchId,
+      );
+
   /// Starts a fresh draft in [mode], keeping nothing from the previous one.
   void start(BroMode mode) => state = ComposerState(
         mode: mode,
         text: '',
         tone: ref.read(settingsProvider).defaultTone,
         threeOptions: state.threeOptions,
+        matchId: state.matchId,
       );
 
   /// Used by the share-sheet flow: text from Messenger, BANTER preselected.

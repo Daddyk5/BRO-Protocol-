@@ -11,6 +11,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/bro_snackbar.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../services/ocr_service.dart';
+import '../../matches/providers/matches_provider.dart';
+import '../../matches/ui/matches_screen.dart';
 import '../../settings/providers/settings_provider.dart';
 import '../data/reply_repository.dart';
 import '../providers/composer_provider.dart';
@@ -63,6 +65,8 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
             tone: state.tone,
             language: ref.read(settingsProvider).language,
             count: state.threeOptions ? 3 : 1,
+            tips: ref.read(settingsProvider).showTips,
+            notes: ref.read(matchesProvider.notifier).byId(state.matchId)?.promptNotes,
           ),
         );
     context.push('/home/composer/result');
@@ -91,7 +95,9 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           children: [
             _ModeChips(selected: state.mode, onSelected: controller.setMode),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            _MatchPicker(selectedId: state.matchId, onChanged: controller.setMatch),
+            const SizedBox(height: 16),
             Text(state.mode.inputLabel.toUpperCase(), style: AppTextStyles.title.copyWith(fontSize: 18)),
             const SizedBox(height: 8),
             Semantics(
@@ -161,6 +167,53 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The `For: <match>` picker. Picking a match sends their saved notes along.
+class _MatchPicker extends ConsumerWidget {
+  const _MatchPicker({required this.selectedId, required this.onChanged});
+
+  final String? selectedId;
+  final ValueChanged<String?> onChanged;
+
+  Future<void> _add(BuildContext context) async {
+    final match = await showMatchEditor(context);
+    if (match != null) onChanged(match.id);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final matches = ref.watch(matchesProvider);
+    // A deleted match falls back to "No one specific".
+    final value = matches.any((m) => m.id == selectedId) ? selectedId : null;
+
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String?>(
+            initialValue: value,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'For',
+              prefixIcon: Icon(Icons.person_outline_rounded),
+            ),
+            items: [
+              const DropdownMenuItem<String?>(value: null, child: Text('No one specific')),
+              for (final m in matches)
+                DropdownMenuItem<String?>(value: m.id, child: Text(m.name, overflow: TextOverflow.ellipsis)),
+            ],
+            onChanged: onChanged,
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton.outlined(
+          tooltip: 'Add match',
+          icon: const Icon(Icons.person_add_alt_1_rounded),
+          onPressed: () => _add(context),
+        ),
+      ],
     );
   }
 }

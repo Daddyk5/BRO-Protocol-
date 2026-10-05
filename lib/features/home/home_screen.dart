@@ -51,6 +51,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         title: const BroLogo.full(size: 34),
         actions: [
           IconButton(
+            tooltip: 'Matches',
+            icon: const Icon(Icons.people_alt_outlined),
+            onPressed: () => context.push('/home/matches'),
+          ),
+          IconButton(
             tooltip: 'History',
             icon: const Icon(Icons.history_rounded),
             onPressed: () => context.push('/home/history'),
@@ -81,6 +86,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             _ModeRow(left: BroMode.opener, right: BroMode.banter, onTap: _openMode),
             const SizedBox(height: 12),
             _ModeRow(left: BroMode.moveOffApp, right: BroMode.revive, onTap: _openMode),
+            const SizedBox(height: 12),
+            _ModeRow(left: BroMode.improveDraft, right: BroMode.dateIdeas, onTap: _openMode),
             const SizedBox(height: 12),
             ModeCard(mode: BroMode.lateNight, onTap: () => _openMode(BroMode.lateNight)),
             const SizedBox(height: 20),

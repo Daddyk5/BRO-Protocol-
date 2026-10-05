@@ -52,6 +52,7 @@ export const generateReply = onCall(
       engine ??= createReplyEngine({ apiKey: ANTHROPIC_API_KEY.value(), model: LLM_MODEL.value(), logger });
       const { replies, regenerated } = await generateReplies(engine, input);
       const reply = (replies.find((r) => r.label === "Balanced") ?? replies[0]).reply;
+      const tipsReturned = replies.filter((r) => r.tip).length;
 
       // Log shape only, never the chat content.
       logger.info("Reply generated", {
@@ -60,6 +61,8 @@ export const generateReply = onCall(
         contextChars: input.context.length,
         replies: replies.length,
         regenerated,
+        tipsReturned,
+        withNotes: Boolean(input.notes),
         caller: request.app ? "app" : "extension",
       });
       return { reply, replies };

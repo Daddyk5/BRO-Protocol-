@@ -19,6 +19,7 @@ const input: GenerateReplyInput = {
   language: "english",
   deviceId: "device-1234",
   count: 1,
+  tips: false,
 };
 
 // A fake Ollama: each /api/chat call answers with the next queued reply.
@@ -66,6 +67,34 @@ test("ollama: regenerates once on a banned word, then gives up", async () => {
 
   queue = ["Love the vibe.", "Still a vibe."];
   await assert.rejects(ollama().generate(input), (e: unknown) => e instanceof ReplyError && e.code === "internal");
+});
+
+test("ollama: returns the tip only when asked, and sends notes", async () => {
+  queue = ["Ramen Friday?\nWHY: Uses what she loves."];
+  const withTip = await ollama().generate({ ...input, tips: true, notes: "Loves ramen" });
+  assert.deepEqual(withTip, { reply: "Ramen Friday?", regenerated: false, tip: "Uses what she loves." });
+  assert.match(lastBody.messages?.[0].content ?? "", /Notes about her: "Loves ramen"/);
+  assert.match(lastBody.messages?.[1].content ?? "", /WHY:/);
+
+  queue = ["Ramen Friday?"];
+  assert.deepEqual(await ollama().generate(input), { reply: "Ramen Friday?", regenerated: false });
+});
+
+test("generateReplies: DATE_IDEAS varies the date type and keeps tips", async () => {
+  const angles: string[] = [];
+  const engine: ReplyEngine = {
+    generate: async ({ angle }) => {
+      angles.push(angle ?? "");
+      return { reply: `ask:${angle?.split(" ")[0]}`, regenerated: false, tip: "Specific." };
+    },
+  };
+  const { replies } = await generateReplies(engine, { ...input, mode: "DATE_IDEAS", count: 3 });
+  assert.deepEqual(
+    replies.map((r) => r.label),
+    ["Low-key", "Activity", "Evening"],
+  );
+  assert.equal(new Set(angles).size, 3);
+  assert.ok(replies.every((r) => r.tip === "Specific."));
 });
 
 test("ollama: unreachable server maps to unavailable", async () => {

@@ -9,6 +9,7 @@ import 'features/composer/ui/composer_screen.dart';
 import 'features/composer/ui/result_screen.dart';
 import 'features/history/ui/history_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/matches/ui/matches_screen.dart';
 import 'features/settings/ui/settings_screen.dart';
 import 'features/splash/splash_screen.dart';
 import 'services/share_intent_service.dart';
@@ -41,6 +42,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           GoRoute(path: 'history', builder: (context, state) => const HistoryScreen()),
+          GoRoute(path: 'matches', builder: (context, state) => const MatchesScreen()),
           GoRoute(path: 'settings', builder: (context, state) => const SettingsScreen()),
         ],
       ),

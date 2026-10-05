@@ -62,6 +62,8 @@ class ApiService {
     required double tone,
     required AppLanguage language,
     int count = 1,
+    bool tips = false,
+    String? notes,
   }) async {
     final headers = <String, String>{};
     if (AppConstants.selfHosted) {
@@ -88,6 +90,8 @@ class ApiService {
             'language': language.apiValue,
             'deviceId': _deviceId,
             'count': count,
+            'tips': tips,
+            if (notes != null && notes.isNotEmpty) 'notes': notes,
           },
         },
         options: Options(headers: headers),
@@ -101,6 +105,7 @@ class ApiService {
                 label: r['label'] is String ? r['label'] as String : toneLabel(tone),
                 tone: r['tone'] is num ? (r['tone'] as num).toDouble() : tone,
                 text: r['reply'] as String,
+                tip: r['tip'] is String ? r['tip'] as String : null,
               ),
       ];
       // Older backends only send `reply`.

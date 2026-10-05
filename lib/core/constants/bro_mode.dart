@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// The five plays. [apiValue] is what the backend's `[MODE: ...]` flag expects.
+/// The plays. [apiValue] is what the backend's `[MODE: ...]` flag expects.
 enum BroMode {
   opener(
     apiValue: 'OPENER',
@@ -29,6 +29,20 @@ enum BroMode {
     description: 'Restart a chat that went quiet',
     inputLabel: 'The last few messages',
     icon: Icons.replay_rounded,
+  ),
+  improveDraft(
+    apiValue: 'IMPROVE_DRAFT',
+    title: 'FIX MY DRAFT',
+    description: 'Same message, sharper',
+    inputLabel: 'Your draft (her message above it is fine)',
+    icon: Icons.auto_fix_high_rounded,
+  ),
+  dateIdeas(
+    apiValue: 'DATE_IDEAS',
+    title: 'DATE IDEAS',
+    description: 'Turn the chat into a real plan',
+    inputLabel: 'The chat so far',
+    icon: Icons.event_available_rounded,
   ),
   lateNight(
     apiValue: 'LATE_NIGHT',

@@ -7,14 +7,18 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/bro_mode.dart';
 
 class AppSettings {
-  const AppSettings({required this.defaultTone, required this.language});
+  const AppSettings({required this.defaultTone, required this.language, this.showTips = true});
 
   final double defaultTone;
   final AppLanguage language;
 
-  AppSettings copyWith({double? defaultTone, AppLanguage? language}) => AppSettings(
+  /// Show a one-line "why this works" under each reply.
+  final bool showTips;
+
+  AppSettings copyWith({double? defaultTone, AppLanguage? language, bool? showTips}) => AppSettings(
         defaultTone: defaultTone ?? this.defaultTone,
         language: language ?? this.language,
+        showTips: showTips ?? this.showTips,
       );
 }
 
@@ -22,6 +26,7 @@ abstract final class _Keys {
   static const tone = 'defaultTone';
   static const language = 'language';
   static const deviceId = 'deviceId';
+  static const showTips = 'showTips';
 }
 
 final settingsBoxProvider = Provider<Box<dynamic>>((ref) => Hive.box<dynamic>(HiveBoxes.settings));
@@ -37,7 +42,13 @@ class SettingsNotifier extends Notifier<AppSettings> {
     return AppSettings(
       defaultTone: (box.get(_Keys.tone, defaultValue: 0.5) as num).toDouble(),
       language: AppLanguage.fromApi(box.get(_Keys.language) as String?),
+      showTips: box.get(_Keys.showTips, defaultValue: true) as bool,
     );
+  }
+
+  Future<void> setShowTips(bool value) async {
+    state = state.copyWith(showTips: value);
+    await _box.put(_Keys.showTips, value);
   }
 
   Future<void> setDefaultTone(double tone) async {

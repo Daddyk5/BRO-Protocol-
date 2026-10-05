@@ -3,13 +3,17 @@ import 'package:hive/hive.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/bro_mode.dart';
 
-/// One of the replies written for a request (Chill / Balanced / Bold).
+/// One of the replies written for a request: Chill / Balanced / Bold, or a
+/// date type (Low-key / Activity / Evening) in DATE IDEAS.
 class ReplyOption {
-  const ReplyOption({required this.label, required this.tone, required this.text});
+  const ReplyOption({required this.label, required this.tone, required this.text, this.tip});
 
   final String label;
   final double tone;
   final String text;
+
+  /// One-line "why this works", when tips are on.
+  final String? tip;
 }
 
 /// One generated reply, stored in the `history` Hive box. [reply] is the main
@@ -74,7 +78,12 @@ class GenerationAdapter extends TypeAdapter<Generation> {
       // Field 7 was added with multi-reply; older entries don't have it.
       options: [
         for (final o in (fields[7] as List?) ?? const [])
-          ReplyOption(label: (o as List)[0] as String, tone: (o[1] as num).toDouble(), text: o[2] as String),
+          ReplyOption(
+            label: (o as List)[0] as String,
+            tone: (o[1] as num).toDouble(),
+            text: o[2] as String,
+            tip: o.length > 3 ? o[3] as String? : null,
+          ),
       ],
     );
   }
@@ -99,7 +108,7 @@ class GenerationAdapter extends TypeAdapter<Generation> {
       ..write(obj.createdAt.millisecondsSinceEpoch)
       ..writeByte(7)
       ..write([
-        for (final o in obj.options) [o.label, o.tone, o.text],
+        for (final o in obj.options) [o.label, o.tone, o.text, o.tip],
       ]);
   }
 

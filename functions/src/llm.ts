@@ -1,8 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 import { GENERIC_FAILURE, ReplyError } from "./errors";
-import { findBannedWords, postProcess } from "./postprocess";
-import { OPTION_TONES, USER_TURN, buildSystemPrompt, retryUserTurn, toneLabel } from "./prompt";
+import { findBannedWords, postProcess, splitTip } from "./postprocess";
+import { buildSystemPrompt, optionSpecs, retryUserTurn, userTurn } from "./prompt";
 import type { GenerateReplyInput } from "./validation";
 
 export interface Logger {
@@ -27,15 +27,17 @@ export interface HealthStatus {
 }
 
 export interface ReplyEngine {
-  generate(input: GenerateReplyInput): Promise<{ reply: string; regenerated: boolean }>;
+  generate(input: GenerateReplyInput): Promise<{ reply: string; regenerated: boolean; tip?: string }>;
   /** Probes the model provider (no generation, so no token cost). */
   check?(): Promise<HealthStatus>;
 }
 
 export interface ReplyOption {
-  label: "Chill" | "Balanced" | "Bold";
+  /** "Chill" / "Balanced" / "Bold", or the date type in DATE_IDEAS mode. */
+  label: string;
   tone: number;
   reply: string;
+  tip?: string;
 }
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
@@ -149,18 +151,30 @@ export function createReplyEngine({ apiKey, model, logger, ollamaUrl }: ReplyEng
   return {
     async generate(input) {
       try {
-        const system = buildSystemPrompt(input.mode, input.tone, input.language, input.context);
-        let reply = postProcess(await writeReply(system, USER_TURN));
-        const banned = findBannedWords(reply);
+        const system = buildSystemPrompt(input.mode, input.tone, input.language, input.context, {
+          notes: input.notes,
+          angle: input.angle,
+        });
+        const write = async (turn: string) => {
+          const { message, tip } = splitTip(await writeReply(system, turn));
+          return { reply: postProcess(message), tip };
+        };
+
+        let result = await write(userTurn(input.tips));
+        const banned = findBannedWords(result.reply);
         if (banned.length > 0) {
           // One regeneration, naming the offending words.
-          reply = postProcess(await writeReply(system, retryUserTurn(banned)));
-          if (findBannedWords(reply).length > 0) {
+          result = await write(retryUserTurn(banned, input.tips));
+          if (findBannedWords(result.reply).length > 0) {
             throw new ReplyError("internal", "Came back off-brand. Hit regenerate.");
           }
         }
-        if (!reply) throw new ReplyError("internal", "Came back empty. Hit regenerate.");
-        return { reply, regenerated: banned.length > 0 };
+        if (!result.reply) throw new ReplyError("internal", "Came back empty. Hit regenerate.");
+        return {
+          reply: result.reply,
+          regenerated: banned.length > 0,
+          ...(input.tips && result.tip ? { tip: result.tip } : {}),
+        };
       } catch (error) {
         throw toReplyError(error);
       }
@@ -223,22 +237,26 @@ export function withFallback(primary: ReplyEngine, fallback: ReplyEngine, logger
 }
 
 /**
- * Writes `input.count` replies. One reply uses the caller's tone; several are
- * spread Chill → Bold and written in parallel. Returns whatever succeeded and
- * throws the first error only when every option failed.
+ * Writes `input.count` replies in parallel (see `optionSpecs`: tones Chill →
+ * Bold, or date types in DATE_IDEAS). Returns whatever succeeded and throws
+ * the first error only when every option failed.
  */
 export async function generateReplies(
   engine: ReplyEngine,
   input: GenerateReplyInput,
 ): Promise<{ replies: ReplyOption[]; regenerated: number }> {
-  const tones = OPTION_TONES[input.count] ?? [input.tone];
-  const results = await Promise.allSettled(tones.map((tone) => engine.generate({ ...input, tone })));
+  const specs = optionSpecs(input.mode, input.tone, input.count);
+  const results = await Promise.allSettled(
+    specs.map(({ tone, angle }) => engine.generate({ ...input, tone, ...(angle ? { angle } : {}) })),
+  );
 
   const replies: ReplyOption[] = [];
   let regenerated = 0;
   results.forEach((result, i) => {
     if (result.status !== "fulfilled") return;
-    replies.push({ label: toneLabel(tones[i]), tone: tones[i], reply: result.value.reply });
+    const { label, tone } = specs[i];
+    const { reply, tip } = result.value;
+    replies.push({ label, tone, reply, ...(tip ? { tip } : {}) });
     if (result.value.regenerated) regenerated += 1;
   });
   if (replies.length === 0) throw (results[0] as PromiseRejectedResult).reason;

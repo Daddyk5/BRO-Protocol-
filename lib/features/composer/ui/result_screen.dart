@@ -167,6 +167,10 @@ class _ResultViewState extends State<_ResultView> {
           else
             _Bubble.sent(text: _options[i].text),
         ],
+        if (_options[_selected].tip case final tip?) ...[
+          const SizedBox(height: 12),
+          _TipCard(tip: tip),
+        ],
         const SizedBox(height: 6),
         Align(
           alignment: Alignment.centerRight,
@@ -205,6 +209,45 @@ class _ResultViewState extends State<_ResultView> {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _TipCard extends StatelessWidget {
+  const _TipCard({required this.tip});
+
+  final String tip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Why it works: $tip',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadii.cardRadius,
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.lightbulb_outline_rounded, size: 18, color: AppColors.textMuted),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: 'Why it works: ', style: AppTextStyles.label),
+                    TextSpan(text: tip, style: AppTextStyles.bodyMuted),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

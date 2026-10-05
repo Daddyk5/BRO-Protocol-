@@ -119,6 +119,7 @@ export function createApp({ engine, limiter, logger, clientToken }: AppDeps): Re
 
       const { replies, regenerated } = await generateReplies(engine, input);
       const reply = (replies.find((r) => r.label === "Balanced") ?? replies[0]).reply;
+      const tipsReturned = replies.filter((r) => r.tip).length;
       // Log shape only, never the chat content.
       logger.info("Reply generated", {
         mode: input.mode,
@@ -126,6 +127,8 @@ export function createApp({ engine, limiter, logger, clientToken }: AppDeps): Re
         contextChars: input.context.length,
         replies: replies.length,
         regenerated,
+        tipsReturned,
+        withNotes: Boolean(input.notes),
       });
       send(res, 200, { result: { reply, replies } });
     } catch (error) {

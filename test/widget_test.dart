@@ -1,8 +1,10 @@
 import 'dart:io';
 
+import 'package:bro_protocol/core/constants/app_constants.dart';
 import 'package:bro_protocol/core/constants/bro_mode.dart';
 import 'package:bro_protocol/features/history/data/generation.dart';
 import 'package:bro_protocol/features/history/data/history_repository.dart';
+import 'package:bro_protocol/features/matches/data/match.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
@@ -74,6 +76,38 @@ void main() {
     expect(single.length, 1);
     expect(single.single.label, 'Balanced');
     expect(single.single.text, 'reply 1');
+  });
+
+  test('Tips survive the adapter', () async {
+    final g = Generation(
+      id: 't1',
+      mode: BroMode.dateIdeas,
+      context: 'she loves ramen',
+      reply: 'Ramen Friday?',
+      tone: 0.5,
+      language: AppLanguage.english,
+      createdAt: DateTime(2026, 1, 1),
+      options: const [ReplyOption(label: 'Evening', tone: 0.5, text: 'Ramen Friday?', tip: 'Uses what she loves.')],
+    );
+    final box = await Hive.openBox<Generation>('history');
+    await box.put('t1', g);
+    await box.close();
+
+    final option = (await Hive.openBox<Generation>('history')).get('t1')!.allOptions.single;
+    expect(option.label, 'Evening');
+    expect(option.tip, 'Uses what she loves.');
+  });
+
+  test('Match notes are capped and include the name', () async {
+    final box = await Hive.openBox<dynamic>('matches');
+    final repo = MatchRepository(box);
+    await repo.save(MatchProfile(id: 'a', name: 'Mia', notes: '', updatedAt: DateTime(2026, 1, 1)));
+    await repo.save(MatchProfile(id: 'b', name: 'Jo', notes: 'x' * 2000, updatedAt: DateTime(2026, 1, 2)));
+
+    final all = repo.all();
+    expect(all.map((m) => m.id), ['b', 'a']);
+    expect(all.last.promptNotes, 'Name: Mia.');
+    expect(all.first.promptNotes.length, AppConstants.maxNotesLength);
   });
 
   test('History keeps only the newest 20, newest first', () async {

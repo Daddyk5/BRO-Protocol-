@@ -11,6 +11,8 @@ class ReplyRequest {
     required this.tone,
     required this.language,
     this.count = 1,
+    this.tips = false,
+    this.notes,
   });
 
   final BroMode mode;
@@ -20,6 +22,12 @@ class ReplyRequest {
 
   /// 3 asks for Chill / Balanced / Bold options; 1 writes one reply at [tone].
   final int count;
+
+  /// Ask for a "why this works" line per reply.
+  final bool tips;
+
+  /// Notes about the selected match, sent as context for the reply.
+  final String? notes;
 }
 
 final replyRepositoryProvider = Provider<ReplyRepository>(
@@ -38,6 +46,8 @@ class ReplyRepository {
       tone: request.tone,
       language: request.language,
       count: request.count,
+      tips: request.tips,
+      notes: request.notes,
     );
     final main = options.firstWhere((o) => o.label == 'Balanced', orElse: () => options.first);
     final now = DateTime.now();
@@ -49,7 +59,7 @@ class ReplyRepository {
       tone: main.tone,
       language: request.language,
       createdAt: now,
-      options: options.length > 1 ? options : const [],
+      options: options,
     );
   }
 }

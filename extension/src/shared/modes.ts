@@ -1,4 +1,4 @@
-export type Mode = "OPENER" | "BANTER" | "MOVE_OFF_APP" | "REVIVE" | "LATE_NIGHT";
+export type Mode = "OPENER" | "BANTER" | "MOVE_OFF_APP" | "REVIVE" | "LATE_NIGHT" | "IMPROVE_DRAFT" | "DATE_IDEAS";
 export type Language = "english" | "taglish";
 
 export interface ModeInfo {
@@ -12,6 +12,8 @@ export const MODES: readonly ModeInfo[] = [
   { id: "BANTER", title: "Banter", description: "Reply to her last message" },
   { id: "MOVE_OFF_APP", title: "Move it off-app", description: "Get the number or set the date" },
   { id: "REVIVE", title: "Revive", description: "Restart a chat that went quiet" },
+  { id: "IMPROVE_DRAFT", title: "Fix my draft", description: "Same message, sharper" },
+  { id: "DATE_IDEAS", title: "Date ideas", description: "Turn the chat into a real plan" },
   { id: "LATE_NIGHT", title: "Late night", description: "Smooth, slow-burn flirting" },
 ];
 
