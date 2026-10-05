@@ -40,6 +40,15 @@ docker compose up -d --build
 curl http://localhost:8080/healthz    # {"ok":true}
 ```
 
+**Free local model instead of Claude (Ollama):** with [Ollama](https://ollama.com) running (`ollama pull llama3.2:3b`), set these in `server/.env` and leave `ANTHROPIC_API_KEY` empty:
+
+```bash
+OLLAMA_URL=http://host.docker.internal:11434   # use http://localhost:11434 outside Docker
+LLM_MODEL=llama3.2:3b                          # any model from `ollama list`
+```
+
+Ollama only works with the Docker backend; the Firebase function always uses Claude. Small local models write noticeably weaker replies than Claude.
+
 **2. Run the app**
 
 ```bash

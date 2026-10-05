@@ -15,6 +15,8 @@ export interface ReplyEngineOptions {
   apiKey: string;
   model: string;
   logger: Logger;
+  /** When set (e.g. http://localhost:11434), replies come from this Ollama server instead of Claude. */
+  ollamaUrl?: string;
 }
 
 export interface ReplyEngine {
@@ -22,6 +24,7 @@ export interface ReplyEngine {
 }
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
+export const DEFAULT_OLLAMA_MODEL = "llama3.2:3b";
 
 // Models that accept `output_config.effort` and server-side refusal fallbacks.
 const CURRENT_MODELS = new Set(["claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5", "claude-fable-5-1"]);
@@ -31,11 +34,50 @@ const CURRENT_MODELS = new Set(["claude-opus-5-5", "claude-opus-5", "claude-sonn
  * regeneration if a banned word slips through. Shared by the Cloud Function
  * and the Docker server; throws only ReplyError.
  */
-export function createReplyEngine({ apiKey, model, logger }: ReplyEngineOptions): ReplyEngine {
+export function createReplyEngine({ apiKey, model, logger, ollamaUrl }: ReplyEngineOptions): ReplyEngine {
   const client = new Anthropic({ apiKey, maxRetries: 2, timeout: 45_000 });
   const current = CURRENT_MODELS.has(model);
+  const writeReply = ollamaUrl ? writeOllamaReply : writeClaudeReply;
 
-  async function writeReply(system: string, userTurn: string): Promise<string> {
+  async function writeOllamaReply(system: string, userTurn: string): Promise<string> {
+    let response: Response;
+    try {
+      response = await fetch(`${ollamaUrl!.replace(/\/+$/, "")}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          stream: false,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: userTurn },
+          ],
+          options: { temperature: 0.8, num_predict: 256 },
+        }),
+        signal: AbortSignal.timeout(90_000),
+      });
+    } catch (error) {
+      logger.error("Ollama connection error: is it running at OLLAMA_URL?", { message: String(error) });
+      throw new ReplyError("unavailable", "The wingman is unreachable right now. Try again shortly.");
+    }
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      logger.error("Ollama API error", { status: response.status, detail: detail.slice(0, 300), model });
+      throw new ReplyError("internal", GENERIC_FAILURE);
+    }
+
+    const body = (await response.json()) as { message?: { content?: string } };
+    // Reasoning models wrap their thinking in <think>…</think>; keep only the answer.
+    const text = (body.message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+    if (!text) {
+      logger.warn("Empty completion", { model });
+      throw new ReplyError("internal", "Came back empty. Hit regenerate.");
+    }
+    return text;
+  }
+
+  async function writeClaudeReply(system: string, userTurn: string): Promise<string> {
     const response = await client.beta.messages.create({
       model,
       max_tokens: 2048,

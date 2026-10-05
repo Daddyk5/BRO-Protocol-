@@ -11,4 +11,7 @@ services:
     env_file: server/.env
     ports:
       - "8080:8080"
+    # Lets the container reach Ollama on the host (OLLAMA_URL=http://host.docker.internal:11434).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
