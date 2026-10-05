@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Bro Protocol (Edge, local backend)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "edge",
+      "args": ["--dart-define=BRO_BACKEND_URL=http://localhost:8080"]
+    },
+    {
+      "name": "Bro Protocol (Chrome, local backend)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "chrome",
+      "args": ["--dart-define=BRO_BACKEND_URL=http://localhost:8080"]
+    },
+    {
+      "name": "Bro Protocol (Android emulator, local backend)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["--dart-define=BRO_BACKEND_URL=http://10.0.2.2:8080"]
+    }
+  ]
+}
