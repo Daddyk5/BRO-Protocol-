@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/constants/bro_mode.dart';
+import '../features/history/data/generation.dart';
 import '../features/settings/providers/settings_provider.dart';
 
 class ApiException implements Exception {
@@ -53,11 +54,14 @@ class ApiService {
     return 'https://${AppConstants.functionsRegion}-$projectId.cloudfunctions.net/generateReply';
   }
 
-  Future<String> generateReply({
+  /// Returns [count] options (one per tone, Chill → Bold) or a single reply at
+  /// [tone] when [count] is 1.
+  Future<List<ReplyOption>> generateReplies({
     required BroMode mode,
     required String context,
     required double tone,
     required AppLanguage language,
+    int count = 1,
   }) async {
     final headers = <String, String>{};
     if (AppConstants.selfHosted) {
@@ -83,15 +87,28 @@ class ApiService {
             'tone': double.parse(tone.toStringAsFixed(2)),
             'language': language.apiValue,
             'deviceId': _deviceId,
+            'count': count,
           },
         },
         options: Options(headers: headers),
       );
       final result = response.data?['result'];
-      if (result is Map && result['reply'] is String && (result['reply'] as String).isNotEmpty) {
-        return result['reply'] as String;
+      final options = <ReplyOption>[
+        if (result is Map && result['replies'] is List)
+          for (final r in result['replies'] as List)
+            if (r is Map && r['reply'] is String && (r['reply'] as String).isNotEmpty)
+              ReplyOption(
+                label: r['label'] is String ? r['label'] as String : toneLabel(tone),
+                tone: r['tone'] is num ? (r['tone'] as num).toDouble() : tone,
+                text: r['reply'] as String,
+              ),
+      ];
+      // Older backends only send `reply`.
+      if (options.isEmpty && result is Map && result['reply'] is String && (result['reply'] as String).isNotEmpty) {
+        options.add(ReplyOption(label: toneLabel(tone), tone: tone, text: result['reply'] as String));
       }
-      throw const ApiException('Came back empty. Hit regenerate.');
+      if (options.isEmpty) throw const ApiException('Came back empty. Hit regenerate.');
+      return options;
     } on DioException catch (e) {
       throw _mapDioError(e);
     }

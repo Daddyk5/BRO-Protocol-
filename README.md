@@ -37,17 +37,26 @@ An AI wingman that writes one dating-chat reply at a time: confident, warm, witt
 ```bash
 cp server/.env.example server/.env    # set ANTHROPIC_API_KEY
 docker compose up -d --build
-curl http://localhost:8080/healthz    # {"ok":true}
+curl http://localhost:8080/healthz          # {"ok":true}
+curl "http://localhost:8080/healthz?deep=1"  # also checks the model is reachable
 ```
 
-**Free local model instead of Claude (Ollama):** with [Ollama](https://ollama.com) running (`ollama pull llama3.2:3b`), set these in `server/.env` and leave `ANTHROPIC_API_KEY` empty:
+**Free local model (Ollama):** with [Ollama](https://ollama.com) running (`ollama pull llama3.2:3b`), set these in `server/.env`:
 
 ```bash
 OLLAMA_URL=http://host.docker.internal:11434   # use http://localhost:11434 outside Docker
-LLM_MODEL=llama3.2:3b                          # any model from `ollama list`
+OLLAMA_MODEL=llama3.2:3b                       # any model from `ollama list`
 ```
 
+| `server/.env` has | Replies come from |
+| --- | --- |
+| `ANTHROPIC_API_KEY` only | Claude |
+| `OLLAMA_URL` only | Ollama |
+| both | Ollama first; Claude takes over when Ollama is down or keeps breaking the rules |
+
 Ollama only works with the Docker backend; the Firebase function always uses Claude. Small local models write noticeably weaker replies than Claude.
+
+Rate-limit counters are saved to a Docker volume (`RATE_LIMIT_FILE`), so restarting the container doesn't reset them.
 
 **2. Run the app**
 
@@ -126,7 +135,7 @@ For a local emulator, run `firebase emulators:start --only functions,firestore`,
 flutter run --dart-define=FUNCTIONS_BASE_URL=http://10.0.2.2:5001/<project-id>/us-central1
 ```
 
-The model defaults to `claude-opus-5-5`. To change it, set `LLM_MODEL`.
+The model defaults to `claude-opus-5-5`. To change it, set `LLM_MODEL` (on Docker, `CLAUDE_MODEL`).
 
 ## Chrome extension
 
@@ -143,9 +152,9 @@ Open `chrome://extensions`, turn on Developer mode, click **Load unpacked**, and
 ## Features
 
 **Mobile app**
-- **Modes:** Opener, Banter, Move it off-app, Revive
-- **Composer:** paste a chat or scan a screenshot (on-device OCR with ML Kit), set a Chill ↔ Bold tone, and generate
-- **Result:** Copy, Regenerate and Share
+- **Modes:** Opener, Banter, Move it off-app, Revive, Late Night (smooth, slow-burn flirting)
+- **Composer:** paste a chat or scan a screenshot (on-device OCR with ML Kit), then generate **3 options** (Chill, Balanced, Bold) or turn that off and pick one tone
+- **Result:** tap the option you like, then Copy, Regenerate or Share
 - **History:** the last 20 replies, stored only on the device
 - **Settings:** default tone, language (English / Taglish), clear history
 - **Android share:** in Messenger, Share a message to Bro Protocol and it opens in Banter
@@ -160,15 +169,18 @@ Open `chrome://extensions`, turn on Developer mode, click **Load unpacked**, and
 `POST /generateReply` (Docker) or the `generateReply` callable (Firebase), using the same wire format:
 
 ```
-request  { data: { mode: "OPENER" | "BANTER" | "MOVE_OFF_APP" | "REVIVE",
+request  { data: { mode: "OPENER" | "BANTER" | "MOVE_OFF_APP" | "REVIVE" | "LATE_NIGHT",
                    context: string (≤ 5000 chars), tone: 0..1,
-                   language: "english" | "taglish", deviceId: string } }
-response { result: { reply: string } }
+                   language: "english" | "taglish", deviceId: string,
+                   count?: 1..3 } }
+response { result: { reply: string,
+                     replies: [{ label: "Chill" | "Balanced" | "Bold", tone: number, reply: string }] } }
 ```
 
-- **Rate limit:** 20 requests per hour per device. Docker keeps the count in memory; Firebase keeps it in Firestore.
+- **Options:** `count: 3` writes Chill, Balanced and Bold replies in parallel (ignoring `tone`); `reply` is the Balanced one. With `count: 1` (the default), you get one reply at `tone`.
+- **Rate limit:** 20 replies per hour per device, so a 3-option request uses 3. Docker saves the counts to a file; Firebase keeps them in Firestore.
 - **Auth:** Docker uses an optional shared `CLIENT_TOKEN`. Firebase requires an App Check token (app) or an anonymous Firebase Auth token (extension).
-- **Post-processing:** strips quotes, keeps at most 2 sentences, and regenerates once if a banned word appears.
+- **Post-processing:** strips quotes, keeps at most 2 sentences, and regenerates once if a banned word appears (and fails if the retry still has one).
 - **Privacy:** logs record the mode, language and character counts, never chat content.
 
 Run the tests with `npm test` in `server/` or `functions/`, and with `flutter test` for the app.

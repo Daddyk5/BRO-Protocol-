@@ -99,14 +99,29 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-class _ResultView extends StatelessWidget {
+class _ResultView extends StatefulWidget {
   const _ResultView({super.key, required this.generation, required this.onRegenerate});
 
   final Generation generation;
   final VoidCallback onRegenerate;
 
+  @override
+  State<_ResultView> createState() => _ResultViewState();
+}
+
+class _ResultViewState extends State<_ResultView> {
+  late final List<ReplyOption> _options = widget.generation.allOptions;
+
+  // Start on the main (Balanced) reply.
+  late int _selected = () {
+    final i = _options.indexWhere((o) => o.text == widget.generation.reply);
+    return i < 0 ? 0 : i;
+  }();
+
+  String get _reply => _options[_selected].text;
+
   Future<void> _copy(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: generation.reply));
+    await Clipboard.setData(ClipboardData(text: _reply));
     if (context.mounted) showBroSnack(context, 'Copied. Go.');
   }
 
@@ -114,7 +129,7 @@ class _ResultView extends StatelessWidget {
     final box = context.findRenderObject() as RenderBox?;
     await SharePlus.instance.share(
       ShareParams(
-        text: generation.reply,
+        text: _reply,
         sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
       ),
     );
@@ -122,12 +137,16 @@ class _ResultView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final generation = widget.generation;
     final isOpener = generation.mode == BroMode.opener;
+    final multiple = _options.length > 1;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
         Text(
-          '${generation.mode.title} · ${toneLabel(generation.tone)} · ${generation.language.label}',
+          multiple
+              ? '${generation.mode.title} · ${_options.length} options · ${generation.language.label}'
+              : '${generation.mode.title} · ${toneLabel(generation.tone)} · ${generation.language.label}',
           style: AppTextStyles.caption,
         ),
         const SizedBox(height: 16),
@@ -136,15 +155,29 @@ class _ResultView extends StatelessWidget {
           text: generation.context,
         ),
         const SizedBox(height: 12),
-        _Bubble.sent(text: generation.reply),
+        for (var i = 0; i < _options.length; i++) ...[
+          if (i > 0) const SizedBox(height: 10),
+          if (multiple)
+            _Bubble.option(
+              label: _options[i].label,
+              text: _options[i].text,
+              selected: i == _selected,
+              onTap: () => setState(() => _selected = i),
+            )
+          else
+            _Bubble.sent(text: _options[i].text),
+        ],
         const SizedBox(height: 6),
         Align(
           alignment: Alignment.centerRight,
-          child: Text('Not sent. Copy it and send it yourself.', style: AppTextStyles.caption),
+          child: Text(
+            multiple ? 'Tap one to pick it. Nothing is sent for you.' : 'Not sent. Copy it and send it yourself.',
+            style: AppTextStyles.caption,
+          ),
         ),
         const SizedBox(height: 32),
         GradientButton(
-          label: 'COPY',
+          label: multiple ? 'COPY ${_options[_selected].label.toUpperCase()}' : 'COPY',
           icon: Icons.copy_rounded,
           semanticsLabel: 'Copy reply',
           onPressed: () => _copy(context),
@@ -154,7 +187,7 @@ class _ResultView extends StatelessWidget {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: onRegenerate,
+                onPressed: widget.onRegenerate,
                 icon: const Icon(Icons.refresh_rounded),
                 label: const Text('Regenerate'),
               ),
@@ -177,15 +210,26 @@ class _ResultView extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble.received({required this.label, required this.text}) : sent = false;
+  const _Bubble.received({required this.label, required this.text})
+      : sent = false,
+        selected = false,
+        onTap = null;
 
   const _Bubble.sent({required this.text})
       : sent = true,
-        label = 'You';
+        selected = true,
+        label = 'You',
+        onTap = null;
+
+  /// One of several options: full gradient when [selected], outlined otherwise.
+  const _Bubble.option({required this.label, required this.text, required this.selected, required this.onTap})
+      : sent = true;
 
   final bool sent;
   final String label;
   final String text;
+  final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -197,9 +241,17 @@ class _Bubble extends StatelessWidget {
       bottomRight: sent ? const Radius.circular(6) : radius,
     );
 
+    final highlighted = sent && selected;
     return Semantics(
-      label: sent ? 'Your reply: $text' : '$label: $text',
+      label: !sent
+          ? '$label: $text'
+          : onTap == null
+              ? 'Your reply: $text'
+              : '$label option${selected ? ', selected' : ''}: $text',
+      button: onTap != null,
+      selected: onTap != null && selected,
       excludeSemantics: true,
+      onTap: onTap,
       child: Align(
         alignment: sent ? Alignment.centerRight : Alignment.centerLeft,
         child: ConstrainedBox(
@@ -211,22 +263,29 @@ class _Bubble extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 child: Text(label, style: AppTextStyles.caption),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  gradient: sent ? AppColors.gradient : null,
-                  color: sent ? null : AppColors.surface2,
-                  borderRadius: borderRadius,
-                  boxShadow: sent ? AppColors.gradientGlow : null,
+              GestureDetector(
+                onTap: onTap,
+                child: AnimatedContainer(
+                  duration: AppMotion.of(context, AppMotion.fast),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: highlighted ? AppColors.gradient : null,
+                    color: highlighted ? null : AppColors.surface2,
+                    border: sent && !highlighted ? Border.all(color: AppColors.border) : null,
+                    borderRadius: borderRadius,
+                    boxShadow: highlighted ? AppColors.gradientGlow : null,
+                  ),
+                  child: sent
+                      ? (onTap == null
+                          ? SelectableText(text, style: AppTextStyles.bubble)
+                          : Text(text, style: highlighted ? AppTextStyles.bubble : AppTextStyles.body))
+                      : Text(
+                          text,
+                          maxLines: 5,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.body,
+                        ),
                 ),
-                child: sent
-                    ? SelectableText(text, style: AppTextStyles.bubble)
-                    : Text(
-                        text,
-                        maxLines: 5,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.body,
-                      ),
               ),
             ],
           ),

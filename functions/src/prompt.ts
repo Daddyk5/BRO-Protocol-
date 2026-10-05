@@ -1,4 +1,4 @@
-export const MODES = ["OPENER", "BANTER", "MOVE_OFF_APP", "REVIVE"] as const;
+export const MODES = ["OPENER", "BANTER", "MOVE_OFF_APP", "REVIVE", "LATE_NIGHT"] as const;
 export type Mode = (typeof MODES)[number];
 
 export const LANGUAGES = ["english", "taglish"] as const;
@@ -10,6 +10,12 @@ export function toneLabel(tone: number): "Chill" | "Balanced" | "Bold" {
   if (tone < 0.67) return "Balanced";
   return "Bold";
 }
+
+/** The spread used when the caller asks for several options: one reply per tone. */
+export const OPTION_TONES: Record<number, readonly number[]> = {
+  2: [0.15, 0.85],
+  3: [0.15, 0.5, 0.85],
+};
 
 /** The `Tone:` value the prompt sees, e.g. "Bold" or "Chill, Taglish". */
 export function toneString(tone: number, language: Language): string {
@@ -26,6 +32,7 @@ MODES (run exactly one, based on the [MODE] flag):
 2. [MODE: BANTER] Reply to her latest message with dry wit, light teasing or playful misreading. Relaxed, not eager.
 3. [MODE: MOVE_OFF_APP] Smoothly suggest moving to text or meeting up. Direct and low-pressure, framed as a natural next step, with a concrete suggestion (an activity, a day).
 4. [MODE: REVIVE] Restart a quiet chat. Light and observational, with no guilt-tripping or mention of the silence. Easy and interesting to reply to.
+5. [MODE: LATE_NIGHT] Smooth, slow-burn late-night energy: warm, unhurried and a little flirty, like a low-key R&B line. Suggestive at most through mood and confidence, never explicit.
 
 RULES:
 - Exactly 1 or 2 short sentences.

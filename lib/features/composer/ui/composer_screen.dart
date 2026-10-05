@@ -62,6 +62,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
             context: state.text.trim(),
             tone: state.tone,
             language: ref.read(settingsProvider).language,
+            count: state.threeOptions ? 3 : 1,
           ),
         );
     context.push('/home/composer/result');
@@ -133,7 +134,17 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
               ),
             ],
             const SizedBox(height: 24),
-            _ToneSlider(value: state.tone, onChanged: controller.setTone),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: state.threeOptions,
+              onChanged: controller.setThreeOptions,
+              title: Text('3 OPTIONS', style: AppTextStyles.title.copyWith(fontSize: 18)),
+              subtitle: Text('Chill, Balanced and Bold at once. Pick the one you like.', style: AppTextStyles.caption),
+            ),
+            if (!state.threeOptions) ...[
+              const SizedBox(height: 8),
+              _ToneSlider(value: state.tone, onChanged: controller.setTone),
+            ],
             const SizedBox(height: 28),
             GradientButton(
               label: 'GENERATE',

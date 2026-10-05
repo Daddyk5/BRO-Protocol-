@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 import { GENERIC_FAILURE, ReplyError } from "./errors";
 import { findBannedWords, postProcess } from "./postprocess";
-import { USER_TURN, buildSystemPrompt, retryUserTurn } from "./prompt";
+import { OPTION_TONES, USER_TURN, buildSystemPrompt, retryUserTurn, toneLabel } from "./prompt";
 import type { GenerateReplyInput } from "./validation";
 
 export interface Logger {
@@ -19,8 +19,23 @@ export interface ReplyEngineOptions {
   ollamaUrl?: string;
 }
 
+export interface HealthStatus {
+  ok: boolean;
+  provider: string;
+  model: string;
+  detail?: string;
+}
+
 export interface ReplyEngine {
   generate(input: GenerateReplyInput): Promise<{ reply: string; regenerated: boolean }>;
+  /** Probes the model provider (no generation, so no token cost). */
+  check?(): Promise<HealthStatus>;
+}
+
+export interface ReplyOption {
+  label: "Chill" | "Balanced" | "Bold";
+  tone: number;
+  reply: string;
 }
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
@@ -140,6 +155,9 @@ export function createReplyEngine({ apiKey, model, logger, ollamaUrl }: ReplyEng
         if (banned.length > 0) {
           // One regeneration, naming the offending words.
           reply = postProcess(await writeReply(system, retryUserTurn(banned)));
+          if (findBannedWords(reply).length > 0) {
+            throw new ReplyError("internal", "Came back off-brand. Hit regenerate.");
+          }
         }
         if (!reply) throw new ReplyError("internal", "Came back empty. Hit regenerate.");
         return { reply, regenerated: banned.length > 0 };
@@ -147,5 +165,82 @@ export function createReplyEngine({ apiKey, model, logger, ollamaUrl }: ReplyEng
         throw toReplyError(error);
       }
     },
+
+    async check() {
+      const provider = ollamaUrl ? "ollama" : "anthropic";
+      try {
+        if (ollamaUrl) {
+          const res = await fetch(`${ollamaUrl.replace(/\/+$/, "")}/api/tags`, { signal: AbortSignal.timeout(5_000) });
+          if (!res.ok) return { ok: false, provider, model, detail: `Ollama answered HTTP ${res.status}` };
+          const { models = [] } = (await res.json()) as { models?: { name: string }[] };
+          const installed = models.some((m) => m.name === model || m.name === `${model}:latest`);
+          return installed
+            ? { ok: true, provider, model }
+            : { ok: false, provider, model, detail: `Model not installed. Run: ollama pull ${model}` };
+        }
+        await client.models.retrieve(model, {}, { timeout: 5_000, maxRetries: 0 });
+        return { ok: true, provider, model };
+      } catch (error) {
+        return { ok: false, provider, model, detail: error instanceof Error ? error.message : String(error) };
+      }
+    },
   };
+}
+
+/**
+ * Tries [primary] (e.g. a local Ollama model) and, when it is down or keeps
+ * breaking the rules, retries the same request on [fallback] (e.g. Claude).
+ * Caller errors such as refusals are not retried.
+ */
+export function withFallback(primary: ReplyEngine, fallback: ReplyEngine, logger: Logger): ReplyEngine {
+  return {
+    async generate(input) {
+      try {
+        return await primary.generate(input);
+      } catch (error) {
+        if (!(error instanceof ReplyError) || (error.code !== "unavailable" && error.code !== "internal")) throw error;
+        logger.warn("Primary model failed, using fallback", { code: error.code });
+        return fallback.generate(input);
+      }
+    },
+    async check() {
+      const unknown = (provider: string): HealthStatus => ({ ok: true, provider, model: "unknown" });
+      const [main, backup] = await Promise.all([
+        primary.check?.() ?? unknown("primary"),
+        fallback.check?.() ?? unknown("fallback"),
+      ]);
+      const detail = [main.ok ? "" : `primary: ${main.detail}`, backup.ok ? "" : `fallback: ${backup.detail}`]
+        .filter(Boolean)
+        .join("; ");
+      return {
+        ok: main.ok || backup.ok,
+        provider: `${main.provider} -> ${backup.provider}`,
+        model: `${main.model} -> ${backup.model}`,
+        ...(detail ? { detail } : {}),
+      };
+    },
+  };
+}
+
+/**
+ * Writes `input.count` replies. One reply uses the caller's tone; several are
+ * spread Chill → Bold and written in parallel. Returns whatever succeeded and
+ * throws the first error only when every option failed.
+ */
+export async function generateReplies(
+  engine: ReplyEngine,
+  input: GenerateReplyInput,
+): Promise<{ replies: ReplyOption[]; regenerated: number }> {
+  const tones = OPTION_TONES[input.count] ?? [input.tone];
+  const results = await Promise.allSettled(tones.map((tone) => engine.generate({ ...input, tone })));
+
+  const replies: ReplyOption[] = [];
+  let regenerated = 0;
+  results.forEach((result, i) => {
+    if (result.status !== "fulfilled") return;
+    replies.push({ label: toneLabel(tones[i]), tone: tones[i], reply: result.value.reply });
+    if (result.value.regenerated) regenerated += 1;
+  });
+  if (replies.length === 0) throw (results[0] as PromiseRejectedResult).reason;
+  return { replies, regenerated };
 }

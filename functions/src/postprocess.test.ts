@@ -34,5 +34,13 @@ test("validates input", () => {
   assert.throws(() => parseInput({ mode: "NOPE", context: "hi", deviceId: "abcdefgh12" }));
   assert.throws(() => parseInput({ mode: "BANTER", context: "   ", deviceId: "abcdefgh12" }));
   const ok = parseInput({ mode: "REVIVE", context: " hey ", tone: 7, deviceId: "abcdefgh12" });
-  assert.deepEqual(ok, { mode: "REVIVE", context: "hey", tone: 1, language: "english", deviceId: "abcdefgh12" });
+  assert.deepEqual(ok, {
+    mode: "REVIVE",
+    context: "hey",
+    tone: 1,
+    language: "english",
+    deviceId: "abcdefgh12",
+    count: 1,
+  });
+  assert.equal(parseInput({ mode: "LATE_NIGHT", context: "hi", deviceId: "abcdefgh12", count: 9 }).count, 3);
 });

@@ -7,10 +7,10 @@ const COLLECTION = "rateLimits";
 
 /**
  * Fixed one-hour window per device ID, counted in a Firestore transaction so
- * concurrent function instances agree. Returns false when the device is over
- * the limit (the request is not counted).
+ * concurrent function instances agree. Each reply written costs one unit.
+ * Returns false when [cost] would go over the limit (nothing is counted).
  */
-export async function consumeRateLimit(deviceId: string, now = Date.now()): Promise<boolean> {
+export async function consumeRateLimit(deviceId: string, cost = 1, now = Date.now()): Promise<boolean> {
   const db = getFirestore();
   const ref = db.collection(COLLECTION).doc(deviceId);
 
@@ -21,17 +21,18 @@ export async function consumeRateLimit(deviceId: string, now = Date.now()): Prom
     const count = data?.count ?? 0;
 
     if (now - windowStart >= RATE_LIMIT_WINDOW_MS) {
+      if (cost > RATE_LIMIT_MAX) return false;
       tx.set(ref, {
         windowStart: Timestamp.fromMillis(now),
-        count: 1,
+        count: cost,
         // Lets a Firestore TTL policy on `expiresAt` clean up idle devices.
         expiresAt: Timestamp.fromMillis(now + 2 * RATE_LIMIT_WINDOW_MS),
       });
       return true;
     }
-    if (count >= RATE_LIMIT_MAX) return false;
+    if (count + cost > RATE_LIMIT_MAX) return false;
 
-    tx.update(ref, { count: FieldValue.increment(1) });
+    tx.update(ref, { count: FieldValue.increment(cost) });
     return true;
   });
 }

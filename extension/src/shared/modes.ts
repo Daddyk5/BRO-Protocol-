@@ -1,4 +1,4 @@
-export type Mode = "OPENER" | "BANTER" | "MOVE_OFF_APP" | "REVIVE";
+export type Mode = "OPENER" | "BANTER" | "MOVE_OFF_APP" | "REVIVE" | "LATE_NIGHT";
 export type Language = "english" | "taglish";
 
 export interface ModeInfo {
@@ -12,6 +12,7 @@ export const MODES: readonly ModeInfo[] = [
   { id: "BANTER", title: "Banter", description: "Reply to her last message" },
   { id: "MOVE_OFF_APP", title: "Move it off-app", description: "Get the number or set the date" },
   { id: "REVIVE", title: "Revive", description: "Restart a chat that went quiet" },
+  { id: "LATE_NIGHT", title: "Late night", description: "Smooth, slow-burn flirting" },
 ];
 
 /** Same thresholds as the app and the backend. */

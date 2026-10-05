@@ -8,14 +8,17 @@ import type { Logger } from "./core/llm";
 import { MemoryRateLimiter } from "./rateLimit";
 
 const silent: Logger = { info: () => {}, warn: () => {}, error: () => {} };
-const limiter = new MemoryRateLimiter(2);
+const limiter = new MemoryRateLimiter(3);
 let server: Server;
 let base: string;
 
 before(async () => {
   server = createServer(
     createApp({
-      engine: { generate: async (input) => ({ reply: `ok:${input.mode}`, regenerated: false }) },
+      engine: {
+        generate: async (input) => ({ reply: `ok:${input.mode}:${input.tone}`, regenerated: false }),
+        check: async () => ({ ok: false, provider: "ollama", model: "x", detail: "down" }),
+      },
       limiter,
       logger: silent,
       clientToken: "secret-token",
@@ -48,8 +51,26 @@ test("health check", async () => {
 test("returns the callable-shaped result", async () => {
   const res = await call(valid);
   assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { result: { reply: "ok:BANTER" } });
+  assert.deepEqual(await res.json(), {
+    result: { reply: "ok:BANTER:0.5", replies: [{ label: "Balanced", tone: 0.5, reply: "ok:BANTER:0.5" }] },
+  });
   assert.equal(res.headers.get("access-control-allow-origin"), "*");
+});
+
+test("deep health check probes the model", async () => {
+  const res = await fetch(`${base}/healthz?deep=1`);
+  assert.equal(res.status, 503);
+  assert.equal(((await res.json()) as { detail: string }).detail, "down");
+});
+
+test("returns three options, Balanced as the main reply", async () => {
+  const res = await call({ ...valid, mode: "LATE_NIGHT", count: 3, deviceId: "device-multi-1" });
+  const { result } = (await res.json()) as { result: { reply: string; replies: { label: string }[] } };
+  assert.equal(result.reply, "ok:LATE_NIGHT:0.5");
+  assert.deepEqual(
+    result.replies.map((r) => r.label),
+    ["Chill", "Balanced", "Bold"],
+  );
 });
 
 test("rejects a wrong client token", async () => {
@@ -66,6 +87,7 @@ test("validates input", async () => {
 
 test("rate limits per device", async () => {
   const data = { ...valid, deviceId: "device-limit-1" };
+  assert.equal((await call(data)).status, 200);
   assert.equal((await call(data)).status, 200);
   assert.equal((await call(data)).status, 200);
   const res = await call(data);

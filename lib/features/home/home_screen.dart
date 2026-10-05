@@ -81,6 +81,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             _ModeRow(left: BroMode.opener, right: BroMode.banter, onTap: _openMode),
             const SizedBox(height: 12),
             _ModeRow(left: BroMode.moveOffApp, right: BroMode.revive, onTap: _openMode),
+            const SizedBox(height: 12),
+            ModeCard(mode: BroMode.lateNight, onTap: () => _openMode(BroMode.lateNight)),
             const SizedBox(height: 20),
             const _ShareTipCard(),
           ],

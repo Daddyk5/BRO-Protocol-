@@ -10,12 +10,16 @@ class ReplyRequest {
     required this.context,
     required this.tone,
     required this.language,
+    this.count = 1,
   });
 
   final BroMode mode;
   final String context;
   final double tone;
   final AppLanguage language;
+
+  /// 3 asks for Chill / Balanced / Bold options; 1 writes one reply at [tone].
+  final int count;
 }
 
 final replyRepositoryProvider = Provider<ReplyRepository>(
@@ -28,21 +32,24 @@ class ReplyRepository {
   final ApiService _api;
 
   Future<Generation> generate(ReplyRequest request) async {
-    final reply = await _api.generateReply(
+    final options = await _api.generateReplies(
       mode: request.mode,
       context: request.context,
       tone: request.tone,
       language: request.language,
+      count: request.count,
     );
+    final main = options.firstWhere((o) => o.label == 'Balanced', orElse: () => options.first);
     final now = DateTime.now();
     return Generation(
       id: now.microsecondsSinceEpoch.toRadixString(36),
       mode: request.mode,
       context: request.context,
-      reply: reply,
-      tone: request.tone,
+      reply: main.text,
+      tone: main.tone,
       language: request.language,
       createdAt: now,
+      options: options.length > 1 ? options : const [],
     );
   }
 }

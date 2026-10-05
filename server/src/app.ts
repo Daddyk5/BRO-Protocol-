@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, RequestListener, ServerResponse } from "node:http";
 
 import { ReplyError, type ReplyErrorCode } from "./core/errors";
-import type { Logger, ReplyEngine } from "./core/llm";
+import { type Logger, type ReplyEngine, generateReplies } from "./core/llm";
 import { parseInput } from "./core/validation";
 import type { MemoryRateLimiter } from "./rateLimit";
 
@@ -67,16 +67,17 @@ function tokenMatches(expected: string, provided: string | string[] | undefined)
 }
 
 /**
- * POST /generateReply  body { data: { mode, context, tone, language, deviceId } }
- *                      →    { result: { reply } } | { error: { status, message } }
- * GET  /healthz        →    { ok: true }
+ * POST /generateReply  body { data: { mode, context, tone, language, deviceId, count? } }
+ *                      →    { result: { reply, replies: [{ label, tone, reply }] } } | { error: { status, message } }
+ * GET  /healthz        →    { ok: true }   (cheap liveness, used by the Docker HEALTHCHECK)
+ * GET  /healthz?deep=1 →    { ok, provider, model, detail? }   (probes the model; 503 when unreachable)
  *
  * The wire format matches Firebase HTTPS callables, so the app and extension
  * only change their base URL to switch backends.
  */
 export function createApp({ engine, limiter, logger, clientToken }: AppDeps): RequestListener {
   return async (req, res) => {
-    const path = (req.url ?? "/").split("?")[0];
+    const [path, query = ""] = (req.url ?? "/").split("?");
 
     if (req.method === "OPTIONS") {
       res.writeHead(204, CORS_HEADERS);
@@ -84,7 +85,12 @@ export function createApp({ engine, limiter, logger, clientToken }: AppDeps): Re
       return;
     }
     if (req.method === "GET" && path === "/healthz") {
-      send(res, 200, { ok: true });
+      if (!new URLSearchParams(query).has("deep") || !engine.check) {
+        send(res, 200, { ok: true });
+        return;
+      }
+      const status = await engine.check();
+      send(res, status.ok ? 200 : 503, status);
       return;
     }
     if (path !== "/generateReply") {
@@ -104,23 +110,24 @@ export function createApp({ engine, limiter, logger, clientToken }: AppDeps): Re
       const body = (await readJson(req)) as { data?: unknown } | null;
       const input = parseInput(body?.data);
 
-      if (!limiter.consume(`dev_${input.deviceId}`)) {
+      if (!limiter.consume(`dev_${input.deviceId}`, input.count)) {
         throw new ReplyError(
           "resource-exhausted",
           `Easy, bro. That's ${limiter.max} replies this hour. Take a breather and come back.`,
         );
       }
 
-      const { reply, regenerated } = await engine.generate(input);
+      const { replies, regenerated } = await generateReplies(engine, input);
+      const reply = (replies.find((r) => r.label === "Balanced") ?? replies[0]).reply;
       // Log shape only, never the chat content.
       logger.info("Reply generated", {
         mode: input.mode,
         language: input.language,
         contextChars: input.context.length,
-        replyChars: reply.length,
+        replies: replies.length,
         regenerated,
       });
-      send(res, 200, { result: { reply } });
+      send(res, 200, { result: { reply, replies } });
     } catch (error) {
       if (error instanceof ReplyError) {
         sendError(res, error);

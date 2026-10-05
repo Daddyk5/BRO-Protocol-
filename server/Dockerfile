@@ -16,6 +16,8 @@ WORKDIR /app
 COPY server/package.json server/package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/lib ./lib
+# Rate-limit counters (RATE_LIMIT_FILE) live here; docker-compose mounts a volume.
+RUN mkdir -p /data && chown node:node /data
 USER node
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

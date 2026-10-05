@@ -5,7 +5,7 @@ import { defineSecret, defineString } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 
 import { ReplyError } from "./errors";
-import { DEFAULT_MODEL, ReplyEngine, createReplyEngine } from "./llm";
+import { DEFAULT_MODEL, ReplyEngine, createReplyEngine, generateReplies } from "./llm";
 import { RATE_LIMIT_MAX, consumeRateLimit } from "./rateLimit";
 import { parseInput } from "./validation";
 
@@ -20,7 +20,8 @@ const LLM_MODEL = defineString("LLM_MODEL", { default: DEFAULT_MODEL });
 let engine: ReplyEngine | undefined;
 
 /**
- * generateReply({ mode, context, tone, language, deviceId }) → { reply }
+ * generateReply({ mode, context, tone, language, deviceId, count? })
+ *   → { reply, replies: [{ label, tone, reply }] }   (count > 1 spreads tones Chill → Bold)
  *
  * Callers must present either a valid App Check token (the mobile app) or a
  * Firebase Auth ID token (the Chrome extension signs in anonymously, because
@@ -41,7 +42,7 @@ export const generateReply = onCall(
 
       const input = parseInput(request.data);
       const limitKey = request.auth ? `uid_${request.auth.uid}` : `dev_${input.deviceId}`;
-      if (!(await consumeRateLimit(limitKey))) {
+      if (!(await consumeRateLimit(limitKey, input.count))) {
         throw new ReplyError(
           "resource-exhausted",
           `Easy, bro. That's ${RATE_LIMIT_MAX} replies this hour. Take a breather and come back.`,
@@ -49,18 +50,19 @@ export const generateReply = onCall(
       }
 
       engine ??= createReplyEngine({ apiKey: ANTHROPIC_API_KEY.value(), model: LLM_MODEL.value(), logger });
-      const { reply, regenerated } = await engine.generate(input);
+      const { replies, regenerated } = await generateReplies(engine, input);
+      const reply = (replies.find((r) => r.label === "Balanced") ?? replies[0]).reply;
 
       // Log shape only, never the chat content.
       logger.info("Reply generated", {
         mode: input.mode,
         language: input.language,
         contextChars: input.context.length,
-        replyChars: reply.length,
+        replies: replies.length,
         regenerated,
         caller: request.app ? "app" : "extension",
       });
-      return { reply };
+      return { reply, replies };
     } catch (error) {
       if (error instanceof ReplyError) throw new HttpsError(error.code, error.message);
       logger.error("Unexpected error", { error: String(error) });

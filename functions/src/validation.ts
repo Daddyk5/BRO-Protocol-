@@ -3,6 +3,7 @@ import { ReplyError } from "./errors";
 import { LANGUAGES, Language, MODES, Mode } from "./prompt";
 
 export const MAX_CONTEXT_LENGTH = 5000;
+export const MAX_REPLIES = 3;
 
 export interface GenerateReplyInput {
   mode: Mode;
@@ -10,6 +11,8 @@ export interface GenerateReplyInput {
   tone: number;
   language: Language;
   deviceId: string;
+  /** How many options to write (1..MAX_REPLIES); more than one spreads them Chill → Bold. */
+  count: number;
 }
 
 const DEVICE_ID = /^[A-Za-z0-9_-]{8,128}$/;
@@ -23,7 +26,7 @@ export function parseInput(data: unknown): GenerateReplyInput {
 
   const mode = body.mode;
   if (typeof mode !== "string" || !(MODES as readonly string[]).includes(mode)) {
-    throw new ReplyError("invalid-argument", "Pick a mode: OPENER, BANTER, MOVE_OFF_APP or REVIVE.");
+    throw new ReplyError("invalid-argument", "Pick a mode: OPENER, BANTER, MOVE_OFF_APP, REVIVE or LATE_NIGHT.");
   }
 
   const context = typeof body.context === "string" ? body.context.trim() : "";
@@ -50,5 +53,9 @@ export function parseInput(data: unknown): GenerateReplyInput {
     throw new ReplyError("invalid-argument", "Missing device ID. Update the app and try again.");
   }
 
-  return { mode: mode as Mode, context, tone, language, deviceId };
+  const rawCount = body.count;
+  const count =
+    typeof rawCount === "number" && Number.isInteger(rawCount) ? Math.min(MAX_REPLIES, Math.max(1, rawCount)) : 1;
+
+  return { mode: mode as Mode, context, tone, language, deviceId, count };
 }

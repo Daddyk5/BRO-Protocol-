@@ -43,6 +43,39 @@ void main() {
     expect(g.createdAt, DateTime(2026, 1, 1).add(const Duration(minutes: 1)));
   });
 
+  test('Reply options round-trip; single replies fall back to one option', () async {
+    const options = [
+      ReplyOption(label: 'Chill', tone: 0.15, text: 'chill one'),
+      ReplyOption(label: 'Balanced', tone: 0.5, text: 'balanced one'),
+      ReplyOption(label: 'Bold', tone: 0.85, text: 'bold one'),
+    ];
+    final multi = Generation(
+      id: 'm1',
+      mode: BroMode.lateNight,
+      context: 'up late?',
+      reply: 'balanced one',
+      tone: 0.5,
+      language: AppLanguage.english,
+      createdAt: DateTime(2026, 1, 1),
+      options: options,
+    );
+    final box = await Hive.openBox<Generation>('history');
+    await box.put('m1', multi);
+    await box.put('g1', make(1));
+    await box.close();
+
+    final reopened = await Hive.openBox<Generation>('history');
+    final m = reopened.get('m1')!;
+    expect(m.mode, BroMode.lateNight);
+    expect(m.allOptions.map((o) => o.label), ['Chill', 'Balanced', 'Bold']);
+    expect(m.allOptions.last.text, 'bold one');
+
+    final single = reopened.get('g1')!.allOptions;
+    expect(single.length, 1);
+    expect(single.single.label, 'Balanced');
+    expect(single.single.text, 'reply 1');
+  });
+
   test('History keeps only the newest 20, newest first', () async {
     final repo = HistoryRepository(await Hive.openBox<Generation>('history'));
     for (var i = 0; i < 25; i++) {
