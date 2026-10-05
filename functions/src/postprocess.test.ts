@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { findBannedWords, limitSentences, postProcess, splitTip } from "./postprocess";
-import { buildSystemPrompt, optionSpecs, toneString } from "./prompt";
+import { buildSystemPrompt, optionSpecs, toneString, userTurn } from "./prompt";
 import { parseInput } from "./validation";
 
 test("strips quotation marks but keeps apostrophes", () => {
@@ -62,6 +62,25 @@ test("option specs: tones for most modes, date types for DATE_IDEAS", () => {
   assert.deepEqual(optionSpecs("DATE_IDEAS", 0.9, 1), [{ label: "Bold", tone: 0.9 }]);
 });
 
+test("applies length and emoji preferences", () => {
+  assert.equal(postProcess("Coffee? 😄 Saturday works."), "Coffee? 😄 Saturday works.");
+  assert.equal(postProcess("Coffee? 😄 Saturday works.", { emoji: false, short: true }), "Coffee?");
+  assert.equal(postProcess("Deal 👍🏽 see you.", { emoji: false }), "Deal 🏽 see you.".replace(" 🏽", ""));
+});
+
+test("builds tweak and preference prompts", () => {
+  const prompt = buildSystemPrompt("BANTER", 0.5, "english", "hey", {
+    prefs: { emoji: false, short: true, style: "dry, lowercase" },
+    previous: "You seem like trouble.",
+  });
+  assert.match(prompt, /texting style \(match it\): "dry, lowercase"/);
+  assert.match(prompt, /Length: exactly 1 short sentence\./);
+  assert.match(prompt, /Emoji: none\./);
+  assert.match(prompt, /Previous reply: "You seem like trouble\."$/);
+  assert.match(userTurn({ tweak: "FUNNIER" }), /^Rewrite the previous reply: make it funnier/);
+  assert.match(userTurn({ tweak: "SHORTER", tip: true }), /WHY:/);
+});
+
 test("validates input", () => {
   assert.throws(() => parseInput({ mode: "NOPE", context: "hi", deviceId: "abcdefgh12" }));
   assert.throws(() => parseInput({ mode: "BANTER", context: "   ", deviceId: "abcdefgh12" }));
@@ -79,5 +98,20 @@ test("validates input", () => {
   assert.equal(extras.tips, true);
   assert.equal(extras.notes, "Mia");
   assert.throws(() => parseInput({ mode: "BANTER", context: "hi", deviceId: "abcdefgh12", notes: "x".repeat(1001) }));
+
+  const tweaked = parseInput({
+    mode: "BANTER",
+    context: "hi",
+    deviceId: "abcdefgh12",
+    count: 3,
+    tweak: "BOLDER",
+    previous: " Fair point. ",
+    prefs: { emoji: false, short: false, style: "  ", junk: 1 },
+  });
+  assert.equal(tweaked.count, 1);
+  assert.equal(tweaked.previous, "Fair point.");
+  assert.deepEqual(tweaked.prefs, { emoji: false });
+  assert.throws(() => parseInput({ mode: "BANTER", context: "hi", deviceId: "abcdefgh12", tweak: "LOUDER", previous: "x" }));
+  assert.throws(() => parseInput({ mode: "BANTER", context: "hi", deviceId: "abcdefgh12", tweak: "BOLDER" }));
   assert.equal(parseInput({ mode: "LATE_NIGHT", context: "hi", deviceId: "abcdefgh12", count: 9 }).count, 3);
 });

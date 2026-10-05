@@ -16,9 +16,11 @@ import 'features/legal/legal_screen.dart';
 import 'features/legal/legal_text.dart';
 import 'features/matches/ui/matches_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/saved/ui/saved_screen.dart';
 import 'features/settings/providers/settings_provider.dart';
 import 'features/settings/ui/settings_screen.dart';
 import 'features/splash/splash_screen.dart';
+import 'features/stats/ui/stats_screen.dart';
 import 'features/status/status_screens.dart';
 import 'services/share_intent_service.dart';
 
@@ -69,6 +71,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'history', builder: (context, state) => const HistoryScreen()),
           GoRoute(path: 'matches', builder: (context, state) => const MatchesScreen()),
           GoRoute(path: 'help', builder: (context, state) => const HelpScreen()),
+          GoRoute(path: 'saved', builder: (context, state) => const SavedScreen()),
+          GoRoute(path: 'stats', builder: (context, state) => const StatsScreen()),
           GoRoute(path: 'settings', builder: (context, state) => const SettingsScreen()),
         ],
       ),

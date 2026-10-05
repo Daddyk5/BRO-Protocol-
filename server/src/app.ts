@@ -68,7 +68,7 @@ function tokenMatches(expected: string, provided: string | string[] | undefined)
 
 /**
  * POST /generateReply  body { data: { mode, context, tone, language, deviceId, count? } }
- *                      →    { result: { reply, replies: [{ label, tone, reply }] } } | { error: { status, message } }
+ *                      →    { result: { reply, replies: [{ label, tone, reply, tip? }], quota } } | { error: { status, message } }
  * GET  /healthz        →    { ok: true }   (cheap liveness, used by the Docker HEALTHCHECK)
  * GET  /healthz?deep=1 →    { ok, provider, model, detail? }   (probes the model; 503 when unreachable)
  *
@@ -110,7 +110,8 @@ export function createApp({ engine, limiter, logger, clientToken }: AppDeps): Re
       const body = (await readJson(req)) as { data?: unknown } | null;
       const input = parseInput(body?.data);
 
-      if (!limiter.consume(`dev_${input.deviceId}`, input.count)) {
+      const limitKey = `dev_${input.deviceId}`;
+      if (!limiter.consume(limitKey, input.count)) {
         throw new ReplyError(
           "resource-exhausted",
           `Easy, bro. That's ${limiter.max} replies this hour. Take a breather and come back.`,
@@ -129,8 +130,10 @@ export function createApp({ engine, limiter, logger, clientToken }: AppDeps): Re
         regenerated,
         tipsReturned,
         withNotes: Boolean(input.notes),
+        tweak: input.tweak ?? null,
       });
-      send(res, 200, { result: { reply, replies } });
+      const { remaining, resetAt } = limiter.status(limitKey);
+      send(res, 200, { result: { reply, replies, quota: { remaining, limit: limiter.max, resetAt } } });
     } catch (error) {
       if (error instanceof ReplyError) {
         sendError(res, error);

@@ -49,6 +49,13 @@ export class MemoryRateLimiter {
     return true;
   }
 
+  /** What the caller has left in the current window. */
+  status(key: string, now = Date.now()): { remaining: number; resetAt: number } {
+    const window = this.windows.get(key);
+    if (!window || now - window.start >= this.windowMs) return { remaining: this.max, resetAt: now + this.windowMs };
+    return { remaining: Math.max(0, this.max - window.count), resetAt: window.start + this.windowMs };
+  }
+
   sweep(now = Date.now()): void {
     for (const [key, window] of this.windows) {
       if (now - window.start >= this.windowMs) {

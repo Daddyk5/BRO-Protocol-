@@ -154,17 +154,20 @@ export function createReplyEngine({ apiKey, model, logger, ollamaUrl }: ReplyEng
         const system = buildSystemPrompt(input.mode, input.tone, input.language, input.context, {
           notes: input.notes,
           angle: input.angle,
+          prefs: input.prefs,
+          previous: input.previous,
         });
-        const write = async (turn: string) => {
-          const { message, tip } = splitTip(await writeReply(system, turn));
-          return { reply: postProcess(message), tip };
+        const turn = { tip: input.tips, tweak: input.tweak };
+        const write = async (text: string) => {
+          const { message, tip } = splitTip(await writeReply(system, text));
+          return { reply: postProcess(message, { short: input.prefs?.short, emoji: input.prefs?.emoji }), tip };
         };
 
-        let result = await write(userTurn(input.tips));
+        let result = await write(userTurn(turn));
         const banned = findBannedWords(result.reply);
         if (banned.length > 0) {
           // One regeneration, naming the offending words.
-          result = await write(retryUserTurn(banned, input.tips));
+          result = await write(retryUserTurn(banned, turn));
           if (findBannedWords(result.reply).length > 0) {
             throw new ReplyError("internal", "Came back off-brand. Hit regenerate.");
           }

@@ -156,9 +156,12 @@ Open `chrome://extensions`, turn on Developer mode, click **Load unpacked**, and
 - **Modes:** Opener, Banter, Move it off-app, Revive, Late Night (smooth, slow-burn flirting), **Fix my draft** (paste what you were going to send, get it back sharper) and **Date ideas** (three date asks built from what she's mentioned: Low-key, Activity, Evening)
 - **Composer:** paste a chat or scan a screenshot (on-device OCR with ML Kit), pick who it's **for**, then generate **3 options** (Chill, Balanced, Bold) or turn that off and pick one tone
 - **Result:** tap the option you like, then Copy, Regenerate or Share. A **"Why it works"** tip explains each reply (turn it off in Settings)
+- **Rework a reply:** one tap on **Shorter, Funnier, Bolder, Softer** or **+ Question** rewrites just the picked option. **Edit** lets you change it by hand before copying
+- **Saved:** star any reply to keep it on the Saved screen, separate from History (which keeps the last 20)
+- **Your stats:** replies left this hour (reported by the backend), replies this week and all time, active days and your top plays, all counted on the device
 - **Matches:** save notes about each match (interests, plans, inside jokes). Pick her in the composer and replies can use one detail. Notes stay on the device and are only sent with that request
 - **History:** the last 20 replies, stored only on the device
-- **Settings:** default tone, language (English / Taglish), tips on/off, Help & FAQ, Privacy Policy, Terms of Use, replay the intro, clear history, and **Delete all my data** (history, match notes, settings and install ID)
+- **Settings:** default tone, language (English / Taglish), **your style** (how you text, allow emoji, short replies), tips on/off, haptic feedback, Help & FAQ, Privacy Policy, Terms of Use, replay the intro, clear history, and **Delete all my data** (history, match notes, settings and install ID)
 - **Help & FAQ:** how it works, every mode, common questions, and a support contact
 - **Polish:** content is centred at 640 px on tablets, desktop and the web; a friendly "can't connect" screen replaces a blank page when the backend isn't configured; unknown links show a "Nothing here" page
 - **Android share:** in Messenger, Share a message to Bro Protocol and it opens in Banter
@@ -177,14 +180,21 @@ request  { data: { mode: "OPENER" | "BANTER" | "MOVE_OFF_APP" | "REVIVE" | "LATE
                          | "IMPROVE_DRAFT" | "DATE_IDEAS",
                    context: string (≤ 5000 chars), tone: 0..1,
                    language: "english" | "taglish", deviceId: string,
-                   count?: 1..3, tips?: boolean, notes?: string (≤ 1000 chars) } }
+                   count?: 1..3, tips?: boolean, notes?: string (≤ 1000 chars),
+                   prefs?: { emoji?: boolean, short?: boolean, style?: string (≤ 300 chars) },
+                   tweak?: "SHORTER" | "FUNNIER" | "BOLDER" | "SOFTER" | "ADD_QUESTION",
+                   previous?: string (required with tweak, ≤ 600 chars) } }
 response { result: { reply: string,
-                     replies: [{ label: string, tone: number, reply: string, tip?: string }] } }
+                     replies: [{ label: string, tone: number, reply: string, tip?: string }],
+                     quota: { remaining: number, limit: number, resetAt: number /* epoch ms */ } } }
 ```
 
 - **Options:** `count: 3` writes Chill, Balanced and Bold replies in parallel (ignoring `tone`); `reply` is the Balanced one. In `DATE_IDEAS` the three options are date types (Low-key, Activity, Evening) at the caller's `tone` instead. With `count: 1` (the default), you get one reply at `tone`.
 - **Tips:** `tips: true` asks for a one-line "why this works" in the same model call, so it costs no extra request. Small local models sometimes skip it; the reply still comes back.
 - **Notes:** `notes` is added to the prompt as "Notes about her", and the model is told to use at most one detail.
+- **Preferences:** `prefs.style` is passed as the user's own texting style; `short` keeps one sentence; `emoji: false` tells the model to skip emoji and strips any that slip through.
+- **Tweaks:** `tweak` + `previous` rewrites an existing reply instead of writing a new one (always one reply, one unit of quota).
+- **Quota:** every successful response says how many replies are left in the current hour.
 - **Rate limit:** 20 replies per hour per device, so a 3-option request uses 3. Docker saves the counts to a file; Firebase keeps them in Firestore.
 - **Auth:** Docker uses an optional shared `CLIENT_TOKEN`. Firebase requires an App Check token (app) or an anonymous Firebase Auth token (extension).
 - **Post-processing:** strips quotes, keeps at most 2 sentences, and regenerates once if a banned word appears (and fails if the retry still has one).

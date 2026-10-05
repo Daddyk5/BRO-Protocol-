@@ -9,6 +9,8 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/bro_logo.dart';
 import '../../services/share_intent_service.dart';
 import '../composer/providers/composer_provider.dart';
+import '../saved/providers/saved_provider.dart';
+import '../stats/providers/stats_provider.dart';
 import 'mode_card.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -91,6 +93,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 12),
             ModeCard(mode: BroMode.lateNight, onTap: () => _openMode(BroMode.lateNight)),
             const SizedBox(height: 20),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _QuickLink(
+                      icon: Icons.star_rounded,
+                      title: 'SAVED',
+                      subtitle: '${ref.watch(savedProvider).length} replies',
+                      onTap: () => context.push('/home/saved'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickLink(
+                      icon: Icons.insights_rounded,
+                      title: 'YOUR STATS',
+                      subtitle: '${ref.watch(statsProvider).thisWeek} this week',
+                      onTap: () => context.push('/home/stats'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
             const _ShareTipCard(),
           ],
         ),
@@ -118,6 +145,49 @@ class _ModeRow extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(child: ModeCard(mode: right, onTap: () => onTap(right))),
         ],
+      ),
+    );
+  }
+}
+
+class _QuickLink extends StatelessWidget {
+  const _QuickLink({required this.icon, required this.title, required this.subtitle, required this.onTap});
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '$title, $subtitle',
+      excludeSemantics: true,
+      child: Card(
+        color: AppColors.surface2,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Icon(icon, color: AppColors.textMuted),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: AppTextStyles.title.copyWith(fontSize: 16)),
+                      Text(subtitle, style: AppTextStyles.caption),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

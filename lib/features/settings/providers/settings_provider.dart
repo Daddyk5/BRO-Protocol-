@@ -5,6 +5,7 @@ import 'package:hive/hive.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/bro_mode.dart';
+import '../../../core/constants/reply_prefs.dart';
 
 class AppSettings {
   const AppSettings({
@@ -12,6 +13,10 @@ class AppSettings {
     required this.language,
     this.showTips = true,
     this.onboardingDone = false,
+    this.allowEmoji = true,
+    this.shortReplies = false,
+    this.styleNotes = '',
+    this.haptics = true,
   });
 
   final double defaultTone;
@@ -23,12 +28,36 @@ class AppSettings {
   /// The user finished onboarding and accepted the current terms version.
   final bool onboardingDone;
 
-  AppSettings copyWith({double? defaultTone, AppLanguage? language, bool? showTips, bool? onboardingDone}) =>
+  final bool allowEmoji;
+  final bool shortReplies;
+
+  /// How the user texts, in their own words ("dry, lowercase, no exclamation marks").
+  final String styleNotes;
+
+  /// Light vibration on copy and generate (phones only).
+  final bool haptics;
+
+  ReplyPrefs get prefs => ReplyPrefs(allowEmoji: allowEmoji, short: shortReplies, style: styleNotes);
+
+  AppSettings copyWith({
+    double? defaultTone,
+    AppLanguage? language,
+    bool? showTips,
+    bool? onboardingDone,
+    bool? allowEmoji,
+    bool? shortReplies,
+    String? styleNotes,
+    bool? haptics,
+  }) =>
       AppSettings(
         defaultTone: defaultTone ?? this.defaultTone,
         language: language ?? this.language,
         showTips: showTips ?? this.showTips,
         onboardingDone: onboardingDone ?? this.onboardingDone,
+        allowEmoji: allowEmoji ?? this.allowEmoji,
+        shortReplies: shortReplies ?? this.shortReplies,
+        styleNotes: styleNotes ?? this.styleNotes,
+        haptics: haptics ?? this.haptics,
       );
 }
 
@@ -38,6 +67,10 @@ abstract final class _Keys {
   static const deviceId = 'deviceId';
   static const showTips = 'showTips';
   static const acceptedTerms = 'acceptedTermsVersion';
+  static const allowEmoji = 'allowEmoji';
+  static const shortReplies = 'shortReplies';
+  static const styleNotes = 'styleNotes';
+  static const haptics = 'haptics';
 }
 
 final settingsBoxProvider = Provider<Box<dynamic>>((ref) => Hive.box<dynamic>(HiveBoxes.settings));
@@ -55,7 +88,32 @@ class SettingsNotifier extends Notifier<AppSettings> {
       language: AppLanguage.fromApi(box.get(_Keys.language) as String?),
       showTips: box.get(_Keys.showTips, defaultValue: true) as bool,
       onboardingDone: (box.get(_Keys.acceptedTerms, defaultValue: 0) as int) >= AppConstants.termsVersion,
+      allowEmoji: box.get(_Keys.allowEmoji, defaultValue: true) as bool,
+      shortReplies: box.get(_Keys.shortReplies, defaultValue: false) as bool,
+      styleNotes: box.get(_Keys.styleNotes, defaultValue: '') as String,
+      haptics: box.get(_Keys.haptics, defaultValue: true) as bool,
     );
+  }
+
+  Future<void> setAllowEmoji(bool value) async {
+    state = state.copyWith(allowEmoji: value);
+    await _box.put(_Keys.allowEmoji, value);
+  }
+
+  Future<void> setShortReplies(bool value) async {
+    state = state.copyWith(shortReplies: value);
+    await _box.put(_Keys.shortReplies, value);
+  }
+
+  Future<void> setStyleNotes(String value) async {
+    final trimmed = value.trim();
+    state = state.copyWith(styleNotes: trimmed);
+    await _box.put(_Keys.styleNotes, trimmed);
+  }
+
+  Future<void> setHaptics(bool value) async {
+    state = state.copyWith(haptics: value);
+    await _box.put(_Keys.haptics, value);
   }
 
   Future<void> completeOnboarding() async {

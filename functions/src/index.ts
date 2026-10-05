@@ -42,7 +42,8 @@ export const generateReply = onCall(
 
       const input = parseInput(request.data);
       const limitKey = request.auth ? `uid_${request.auth.uid}` : `dev_${input.deviceId}`;
-      if (!(await consumeRateLimit(limitKey, input.count))) {
+      const quota = await consumeRateLimit(limitKey, input.count);
+      if (!quota.allowed) {
         throw new ReplyError(
           "resource-exhausted",
           `Easy, bro. That's ${RATE_LIMIT_MAX} replies this hour. Take a breather and come back.`,
@@ -65,7 +66,7 @@ export const generateReply = onCall(
         withNotes: Boolean(input.notes),
         caller: request.app ? "app" : "extension",
       });
-      return { reply, replies };
+      return { reply, replies, quota: { remaining: quota.remaining, limit: RATE_LIMIT_MAX, resetAt: quota.resetAt } };
     } catch (error) {
       if (error instanceof ReplyError) throw new HttpsError(error.code, error.message);
       logger.error("Unexpected error", { error: String(error) });

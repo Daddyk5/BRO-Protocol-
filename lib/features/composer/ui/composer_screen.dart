@@ -58,6 +58,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
     final state = ref.read(composerProvider);
     if (!state.canGenerate) return;
     FocusScope.of(context).unfocus();
+    if (ref.read(settingsProvider).haptics) HapticFeedback.mediumImpact();
     ref.read(generationProvider.notifier).generate(
           ReplyRequest(
             mode: state.mode,
@@ -66,6 +67,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
             language: ref.read(settingsProvider).language,
             count: state.threeOptions ? 3 : 1,
             tips: ref.read(settingsProvider).showTips,
+            prefs: ref.read(settingsProvider).prefs,
             notes: ref.read(matchesProvider.notifier).byId(state.matchId)?.promptNotes,
           ),
         );

@@ -39,6 +39,8 @@ Future<void> main() async {
   await Hive.openBox<Generation>(HiveBoxes.history);
   await Hive.openBox<dynamic>(HiveBoxes.settings);
   await Hive.openBox<dynamic>(HiveBoxes.matches);
+  await Hive.openBox<dynamic>(HiveBoxes.saved);
+  await Hive.openBox<dynamic>(HiveBoxes.stats);
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

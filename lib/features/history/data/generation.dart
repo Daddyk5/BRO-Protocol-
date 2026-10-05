@@ -14,6 +14,9 @@ class ReplyOption {
 
   /// One-line "why this works", when tips are on.
   final String? tip;
+
+  /// [tip] is dropped when the text changes, since it explained the old text.
+  ReplyOption withText(String text) => ReplyOption(label: label, tone: tone, text: text);
 }
 
 /// One generated reply, stored in the `history` Hive box. [reply] is the main
@@ -42,6 +45,23 @@ class Generation {
   /// Every option to show, falling back to [reply] for single-reply entries.
   List<ReplyOption> get allOptions =>
       options.isNotEmpty ? options : [ReplyOption(label: toneLabel(tone), tone: tone, text: reply)];
+
+  /// Replaces option [index] (after a tweak or an edit). [reply] follows the
+  /// main option, as when the generation was created.
+  Generation withOption(int index, ReplyOption option) {
+    final updated = [...allOptions]..[index] = option;
+    final main = updated.firstWhere((o) => o.label == 'Balanced', orElse: () => updated.first);
+    return Generation(
+      id: id,
+      mode: mode,
+      context: context,
+      reply: main.text,
+      tone: tone,
+      language: language,
+      createdAt: createdAt,
+      options: updated,
+    );
+  }
 
   Generation copyWith({String? reply, DateTime? createdAt, String? id}) => Generation(
         id: id ?? this.id,

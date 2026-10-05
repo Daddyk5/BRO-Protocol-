@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/bro_mode.dart';
+import '../../../core/constants/reply_prefs.dart';
 import '../../../services/api_service.dart';
 import '../../history/data/generation.dart';
+import '../../stats/data/usage_stats.dart';
 
 class ReplyRequest {
   const ReplyRequest({
@@ -13,6 +15,7 @@ class ReplyRequest {
     this.count = 1,
     this.tips = false,
     this.notes,
+    this.prefs = const ReplyPrefs(),
   });
 
   final BroMode mode;
@@ -28,6 +31,9 @@ class ReplyRequest {
 
   /// Notes about the selected match, sent as context for the reply.
   final String? notes;
+
+  /// Emoji, length and the user's own style, from Settings.
+  final ReplyPrefs prefs;
 }
 
 final replyRepositoryProvider = Provider<ReplyRepository>(
@@ -39,8 +45,8 @@ class ReplyRepository {
 
   final ApiService _api;
 
-  Future<Generation> generate(ReplyRequest request) async {
-    final options = await _api.generateReplies(
+  Future<(Generation, Quota?)> generate(ReplyRequest request) async {
+    final batch = await _api.generateReplies(
       mode: request.mode,
       context: request.context,
       tone: request.tone,
@@ -48,10 +54,12 @@ class ReplyRepository {
       count: request.count,
       tips: request.tips,
       notes: request.notes,
+      prefs: request.prefs,
     );
+    final options = batch.options;
     final main = options.firstWhere((o) => o.label == 'Balanced', orElse: () => options.first);
     final now = DateTime.now();
-    return Generation(
+    final generation = Generation(
       id: now.microsecondsSinceEpoch.toRadixString(36),
       mode: request.mode,
       context: request.context,
@@ -61,5 +69,23 @@ class ReplyRepository {
       createdAt: now,
       options: options,
     );
+    return (generation, batch.quota);
+  }
+
+  /// Rewrites [option] with [tweak], keeping its label and tone.
+  Future<(ReplyOption, Quota?)> tweak(ReplyRequest request, ReplyOption option, ReplyTweak tweak) async {
+    final batch = await _api.generateReplies(
+      mode: request.mode,
+      context: request.context,
+      tone: option.tone,
+      language: request.language,
+      tips: request.tips,
+      notes: request.notes,
+      prefs: request.prefs,
+      tweak: tweak,
+      previous: option.text,
+    );
+    final rewritten = batch.options.first;
+    return (ReplyOption(label: option.label, tone: option.tone, text: rewritten.text, tip: rewritten.tip), batch.quota);
   }
 }

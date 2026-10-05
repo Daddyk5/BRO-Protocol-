@@ -25,15 +25,27 @@ export function splitTip(raw: string): { message: string; tip?: string } {
   return { message: match[1], ...(tip ? { tip } : {}) };
 }
 
-/** Strips quotation marks, collapses whitespace and keeps at most 2 sentences. */
-export function postProcess(raw: string): string {
+// Pictographs plus skin-tone modifiers, variation selectors and ZWJ joiners.
+const EMOJI = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D]+/gu;
+
+export interface PostProcessOptions {
+  /** Keep 1 sentence instead of 2. */
+  short?: boolean;
+  /** false strips every emoji. */
+  emoji?: boolean;
+}
+
+/** Strips quotation marks, collapses whitespace and keeps at most 2 sentences (1 when short). */
+export function postProcess(raw: string, { short = false, emoji = true }: PostProcessOptions = {}): string {
   let text = raw.trim();
   text = text.replace(/^(reply|message|you)\s*:\s*/i, "");
   text = text.replace(QUOTES, "");
   const wrapped = text.match(WRAPPING_SINGLE);
   if (wrapped) text = wrapped[1];
-  text = text.replace(/\s+/g, " ").trim();
-  return limitSentences(text, 2);
+  if (!emoji) text = text.replace(EMOJI, "");
+  // Collapse whitespace, and drop the gap a removed emoji leaves before punctuation.
+  text = text.replace(/\s+/g, " ").replace(/ ([.,!?…])/g, "$1").trim();
+  return limitSentences(text, short ? 1 : 2);
 }
 
 /**

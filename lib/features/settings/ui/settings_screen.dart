@@ -12,6 +12,8 @@ import '../../composer/providers/composer_provider.dart';
 import '../../history/providers/history_provider.dart';
 import '../../legal/legal_text.dart';
 import '../../matches/providers/matches_provider.dart';
+import '../../saved/providers/saved_provider.dart';
+import '../../stats/providers/stats_provider.dart';
 import '../providers/settings_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -51,7 +53,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (context) => AlertDialog(
         title: const Text('DELETE ALL MY DATA?'),
         content: const Text(
-          'This erases your history, match notes and settings from this device and resets your install ID. '
+          'This erases your history, saved replies, match notes, stats and settings from this device and resets '
+          'your install ID. '
           'It can\'t be undone.',
         ),
         actions: [
@@ -67,11 +70,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (confirmed != true) return;
     await ref.read(historyProvider.notifier).clear();
     await ref.read(matchesProvider.notifier).clear();
+    await ref.read(savedProvider.notifier).clear();
+    await ref.read(statsProvider.notifier).clear();
     await ref.read(settingsProvider.notifier).reset();
     ref.invalidate(composerProvider);
     if (!mounted) return;
     showBroSnack(context, 'All your data was deleted.');
     context.go('/onboarding');
+  }
+
+  Future<void> _editStyle(String current) async {
+    final controller = TextEditingController(text: current);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('YOUR TEXTING STYLE'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 2,
+          maxLines: 4,
+          maxLength: AppConstants.maxStyleLength,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(hintText: 'Dry humour, mostly lowercase, no exclamation marks.'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Save')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result != null) await ref.read(settingsProvider.notifier).setStyleNotes(result);
   }
 
   void _showAbout() {
@@ -159,6 +189,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onSelectionChanged: (selection) => notifier.setLanguage(selection.first),
               ),
             ),
+            const _SectionHeader('YOUR STYLE'),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.edit_note_rounded),
+                    title: const Text('How you text'),
+                    subtitle: Text(
+                      settings.styleNotes.isEmpty ? 'Not set. Replies use a neutral style.' : settings.styleNotes,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _editStyle(settings.styleNotes),
+                  ),
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.emoji_emotions_outlined),
+                    title: const Text('Allow emoji'),
+                    subtitle: const Text('Off removes every emoji from replies'),
+                    value: settings.allowEmoji,
+                    onChanged: notifier.setAllowEmoji,
+                  ),
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.short_text_rounded),
+                    title: const Text('Short replies'),
+                    subtitle: const Text('One sentence instead of up to two'),
+                    value: settings.shortReplies,
+                    onChanged: notifier.setShortReplies,
+                  ),
+                ],
+              ),
+            ),
             const _SectionHeader('COACHING'),
             Card(
               child: SwitchListTile(
@@ -167,6 +231,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: const Text('A one-line tip under each reply'),
                 value: settings.showTips,
                 onChanged: notifier.setShowTips,
+              ),
+            ),
+            const _SectionHeader('FEEL'),
+            Card(
+              child: SwitchListTile(
+                secondary: const Icon(Icons.vibration_rounded),
+                title: const Text('Haptic feedback'),
+                subtitle: const Text('A light tap when you generate or copy (phones)'),
+                value: settings.haptics,
+                onChanged: notifier.setHaptics,
               ),
             ),
             const _SectionHeader('HELP & LEGAL'),
@@ -217,7 +291,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ListTile(
                     leading: const Icon(Icons.delete_forever_outlined, color: AppColors.red),
                     title: Text('Delete all my data', style: AppTextStyles.body.copyWith(color: AppColors.red)),
-                    subtitle: const Text('History, match notes, settings and install ID'),
+                    subtitle: const Text('History, saved, matches, stats, settings and install ID'),
                     onTap: _confirmDeleteAll,
                   ),
                 ],

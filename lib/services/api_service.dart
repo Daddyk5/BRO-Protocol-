@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/constants/bro_mode.dart';
+import '../core/constants/reply_prefs.dart';
 import '../features/history/data/generation.dart';
 import '../features/settings/providers/settings_provider.dart';
+import '../features/stats/data/usage_stats.dart';
 
 class ApiException implements Exception {
   const ApiException(this.message);
@@ -16,6 +18,14 @@ class ApiException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// The options written for one request, plus what's left of the hourly quota.
+class ReplyBatch {
+  const ReplyBatch(this.options, this.quota);
+
+  final List<ReplyOption> options;
+  final Quota? quota;
 }
 
 final dioProvider = Provider<Dio>((ref) {
@@ -56,7 +66,9 @@ class ApiService {
 
   /// Returns [count] options (one per tone, Chill → Bold) or a single reply at
   /// [tone] when [count] is 1.
-  Future<List<ReplyOption>> generateReplies({
+  ///
+  /// With [tweak], [previous] is rewritten instead (always one reply).
+  Future<ReplyBatch> generateReplies({
     required BroMode mode,
     required String context,
     required double tone,
@@ -64,6 +76,9 @@ class ApiService {
     int count = 1,
     bool tips = false,
     String? notes,
+    ReplyPrefs prefs = const ReplyPrefs(),
+    ReplyTweak? tweak,
+    String? previous,
   }) async {
     final headers = <String, String>{};
     if (AppConstants.selfHosted) {
@@ -92,6 +107,9 @@ class ApiService {
             'count': count,
             'tips': tips,
             if (notes != null && notes.isNotEmpty) 'notes': notes,
+            'prefs': prefs.toJson(),
+            if (tweak != null) 'tweak': tweak.apiValue,
+            if (tweak != null) 'previous': previous,
           },
         },
         options: Options(headers: headers),
@@ -113,10 +131,19 @@ class ApiService {
         options.add(ReplyOption(label: toneLabel(tone), tone: tone, text: result['reply'] as String));
       }
       if (options.isEmpty) throw const ApiException('Came back empty. Hit regenerate.');
-      return options;
+      return ReplyBatch(options, _parseQuota(result is Map ? result['quota'] : null));
     } on DioException catch (e) {
       throw _mapDioError(e);
     }
+  }
+
+  static Quota? _parseQuota(Object? raw) {
+    if (raw is! Map || raw['remaining'] is! num || raw['limit'] is! num || raw['resetAt'] is! num) return null;
+    return Quota(
+      remaining: (raw['remaining'] as num).toInt(),
+      limit: (raw['limit'] as num).toInt(),
+      resetAt: DateTime.fromMillisecondsSinceEpoch((raw['resetAt'] as num).toInt()),
+    );
   }
 
   ApiException _mapDioError(DioException e) {

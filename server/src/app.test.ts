@@ -51,9 +51,12 @@ test("health check", async () => {
 test("returns the callable-shaped result", async () => {
   const res = await call(valid);
   assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), {
-    result: { reply: "ok:BANTER:0.5", replies: [{ label: "Balanced", tone: 0.5, reply: "ok:BANTER:0.5" }] },
-  });
+  const body = (await res.json()) as { result: { quota: { remaining: number; limit: number; resetAt: number } } };
+  const { quota, ...rest } = body.result;
+  assert.deepEqual(rest, { reply: "ok:BANTER:0.5", replies: [{ label: "Balanced", tone: 0.5, reply: "ok:BANTER:0.5" }] });
+  assert.equal(quota.limit, 3);
+  assert.equal(quota.remaining, 2);
+  assert.ok(quota.resetAt > Date.now());
   assert.equal(res.headers.get("access-control-allow-origin"), "*");
 });
 

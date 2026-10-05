@@ -1,10 +1,12 @@
 import { ReplyError } from "./errors";
 
-import { LANGUAGES, Language, MODES, Mode } from "./prompt";
+import { LANGUAGES, Language, MODES, Mode, ReplyPrefs, TWEAKS, Tweak } from "./prompt";
 
 export const MAX_CONTEXT_LENGTH = 5000;
 export const MAX_REPLIES = 3;
 export const MAX_NOTES_LENGTH = 1000;
+export const MAX_STYLE_LENGTH = 300;
+export const MAX_PREVIOUS_LENGTH = 600;
 
 export interface GenerateReplyInput {
   mode: Mode;
@@ -20,6 +22,11 @@ export interface GenerateReplyInput {
   notes?: string;
   /** Set internally per option in DATE_IDEAS mode; never read from the request. */
   angle?: string;
+  /** The user's standing preferences (emoji, length, own style). */
+  prefs?: ReplyPrefs;
+  /** Rework [previous] instead of writing from scratch (always one reply). */
+  tweak?: Tweak;
+  previous?: string;
 }
 
 const DEVICE_ID = /^[A-Za-z0-9_-]{8,128}$/;
@@ -71,5 +78,46 @@ export function parseInput(data: unknown): GenerateReplyInput {
     throw new ReplyError("invalid-argument", `Match notes are too long (max ${MAX_NOTES_LENGTH} characters).`);
   }
 
-  return { mode: mode as Mode, context, tone, language, deviceId, count, tips, ...(notes ? { notes } : {}) };
+  const prefs = parsePrefs(body.prefs);
+
+  let tweak: Tweak | undefined;
+  let previous: string | undefined;
+  if (body.tweak !== undefined) {
+    if (typeof body.tweak !== "string" || !(body.tweak in TWEAKS)) {
+      throw new ReplyError("invalid-argument", `Unknown tweak. Use one of: ${Object.keys(TWEAKS).join(", ")}.`);
+    }
+    previous = typeof body.previous === "string" ? body.previous.trim() : "";
+    if (!previous || previous.length > MAX_PREVIOUS_LENGTH) {
+      throw new ReplyError("invalid-argument", "Send the reply to rework (max 600 characters).");
+    }
+    tweak = body.tweak as Tweak;
+  }
+
+  return {
+    mode: mode as Mode,
+    context,
+    tone,
+    language,
+    deviceId,
+    count: tweak ? 1 : count,
+    tips,
+    ...(notes ? { notes } : {}),
+    ...(prefs ? { prefs } : {}),
+    ...(tweak ? { tweak, previous } : {}),
+  };
+}
+
+function parsePrefs(raw: unknown): ReplyPrefs | undefined {
+  if (typeof raw !== "object" || raw === null) return undefined;
+  const body = raw as Record<string, unknown>;
+  const style = typeof body.style === "string" ? body.style.trim() : "";
+  if (style.length > MAX_STYLE_LENGTH) {
+    throw new ReplyError("invalid-argument", `Your style notes are too long (max ${MAX_STYLE_LENGTH} characters).`);
+  }
+  const prefs: ReplyPrefs = {
+    ...(typeof body.emoji === "boolean" ? { emoji: body.emoji } : {}),
+    ...(body.short === true ? { short: true } : {}),
+    ...(style ? { style } : {}),
+  };
+  return Object.keys(prefs).length > 0 ? prefs : undefined;
 }

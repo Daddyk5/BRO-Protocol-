@@ -78,11 +78,34 @@ Mode: {SelectedMode}
 Tone: {Tone}
 Context: "{ContextInput}"`;
 
+/** One-tap rewrites of an existing reply. */
+export const TWEAKS = {
+  SHORTER: "make it shorter and punchier",
+  FUNNIER: "make it funnier and more playful",
+  BOLDER: "make it bolder and more confident",
+  SOFTER: "make it softer and warmer",
+  ADD_QUESTION: "end it with an easy, interesting question for her",
+} as const;
+export type Tweak = keyof typeof TWEAKS;
+
+/** The user's standing preferences from the app's Settings. */
+export interface ReplyPrefs {
+  /** false = no emoji at all; undefined/true = the model's call. */
+  emoji?: boolean;
+  /** One short sentence instead of up to two. */
+  short?: boolean;
+  /** How the user texts, in their own words. */
+  style?: string;
+}
+
 export interface PromptExtras {
   /** The user's saved notes about this match. */
   notes?: string;
   /** DATE_IDEAS: the kind of date this option should propose. */
   angle?: string;
+  prefs?: ReplyPrefs;
+  /** The reply being reworked by a tweak. */
+  previous?: string;
 }
 
 export function buildSystemPrompt(
@@ -90,7 +113,7 @@ export function buildSystemPrompt(
   tone: number,
   language: Language,
   context: string,
-  { notes, angle }: PromptExtras = {},
+  { notes, angle, prefs, previous }: PromptExtras = {},
 ): string {
   // Function replacers so `$` sequences in user text are never interpreted.
   let prompt = SYSTEM_PROMPT_TEMPLATE.replace("{SelectedMode}", () => `[MODE: ${mode}]`)
@@ -98,6 +121,10 @@ export function buildSystemPrompt(
     .replace("{ContextInput}", () => context);
   if (notes) prompt += `\nNotes about her: "${notes}"`;
   if (angle) prompt += `\nDate type: ${angle}`;
+  if (prefs?.style) prompt += `\nThe user's own texting style (match it): "${prefs.style}"`;
+  if (prefs?.short) prompt += "\nLength: exactly 1 short sentence.";
+  if (prefs?.emoji === false) prompt += "\nEmoji: none.";
+  if (previous) prompt += `\nPrevious reply: "${previous}"`;
   return prompt;
 }
 
@@ -108,10 +135,16 @@ const TIP_TURN =
   ' Then, on a new line, write "WHY:" and one short sentence on why this reply works. ' +
   "That line is a tip for the user only and is not part of the message.";
 
-export function userTurn(withTip: boolean): string {
-  return withTip ? USER_TURN + TIP_TURN : USER_TURN;
+export interface TurnOptions {
+  tip?: boolean;
+  tweak?: Tweak;
 }
 
-export function retryUserTurn(bannedFound: string[], withTip = false): string {
-  return `${userTurn(withTip)} Do not use these words: ${bannedFound.join(", ")}.`;
+export function userTurn({ tip = false, tweak }: TurnOptions = {}): string {
+  const ask = tweak ? `Rewrite the previous reply: ${TWEAKS[tweak]}. Keep what already works.` : USER_TURN;
+  return tip ? ask + TIP_TURN : ask;
+}
+
+export function retryUserTurn(bannedFound: string[], options: TurnOptions = {}): string {
+  return `${userTurn(options)} Do not use these words: ${bannedFound.join(", ")}.`;
 }

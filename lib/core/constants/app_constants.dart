@@ -35,6 +35,9 @@ abstract final class AppConstants {
   /// Matches the backend's MAX_NOTES_LENGTH.
   static const int maxNotesLength = 1000;
 
+  /// Matches the backend's MAX_STYLE_LENGTH.
+  static const int maxStyleLength = 300;
+
   static const Duration splashDuration = Duration(milliseconds: 2200);
   static const Duration splashReducedMotionDuration = Duration(milliseconds: 900);
 
@@ -49,6 +52,8 @@ abstract final class HiveBoxes {
   static const String history = 'history';
   static const String settings = 'settings';
   static const String matches = 'matches';
+  static const String saved = 'saved';
+  static const String stats = 'stats';
 }
 
 abstract final class HiveTypeIds {

@@ -4,13 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/bro_mode.dart';
+import '../../../core/constants/reply_prefs.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bro_snackbar.dart';
 import '../../../core/widgets/fist_bump_loader.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../services/api_service.dart';
 import '../../history/data/generation.dart';
+import '../../saved/providers/saved_provider.dart';
+import '../../settings/providers/settings_provider.dart';
 import '../providers/generation_provider.dart';
 
 class ResultScreen extends ConsumerWidget {
@@ -99,29 +103,37 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-class _ResultView extends StatefulWidget {
+class _ResultView extends ConsumerStatefulWidget {
   const _ResultView({super.key, required this.generation, required this.onRegenerate});
 
   final Generation generation;
   final VoidCallback onRegenerate;
 
   @override
-  State<_ResultView> createState() => _ResultViewState();
+  ConsumerState<_ResultView> createState() => _ResultViewState();
 }
 
-class _ResultViewState extends State<_ResultView> {
-  late final List<ReplyOption> _options = widget.generation.allOptions;
+class _ResultViewState extends ConsumerState<_ResultView> {
+  // Null until the user picks one: start on the main (Balanced) reply.
+  int? _picked;
+  ReplyTweak? _busy;
 
-  // Start on the main (Balanced) reply.
-  late int _selected = () {
-    final i = _options.indexWhere((o) => o.text == widget.generation.reply);
-    return i < 0 ? 0 : i;
-  }();
+  List<ReplyOption> get _options => widget.generation.allOptions;
 
-  String get _reply => _options[_selected].text;
+  int get _selected {
+    final i = _picked ?? _options.indexWhere((o) => o.text == widget.generation.reply);
+    return i < 0 ? 0 : i.clamp(0, _options.length - 1);
+  }
+
+  ReplyOption get _option => _options[_selected];
+
+  void _haptic() {
+    if (ref.read(settingsProvider).haptics) HapticFeedback.lightImpact();
+  }
 
   Future<void> _copy(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: _reply));
+    _haptic();
+    await Clipboard.setData(ClipboardData(text: _option.text));
     if (context.mounted) showBroSnack(context, 'Copied. Go.');
   }
 
@@ -129,24 +141,62 @@ class _ResultViewState extends State<_ResultView> {
     final box = context.findRenderObject() as RenderBox?;
     await SharePlus.instance.share(
       ShareParams(
-        text: _reply,
+        text: _option.text,
         sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
       ),
     );
   }
 
+  Future<void> _tweak(ReplyTweak tweak) async {
+    setState(() => _busy = tweak);
+    try {
+      await ref.read(generationProvider.notifier).tweak(_selected, tweak);
+      _haptic();
+    } on ApiException catch (e) {
+      if (mounted) showBroSnack(context, e.message);
+    } catch (_) {
+      if (mounted) showBroSnack(context, 'Couldn\'t rework that one. Try again.');
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
+  Future<void> _edit() async {
+    final index = _selected;
+    final edited = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => _EditSheet(initial: _options[index].text),
+    );
+    if (edited == null || edited.trim().isEmpty || edited.trim() == _options[index].text) return;
+    await ref.read(generationProvider.notifier).replaceOption(index, _options[index].withText(edited.trim()));
+  }
+
+  Future<void> _toggleSaved() async {
+    final saved = await ref
+        .read(savedProvider.notifier)
+        .toggle(text: _option.text, mode: widget.generation.mode, label: _option.label);
+    _haptic();
+    if (mounted) showBroSnack(context, saved ? 'Saved. Find it under Saved on Home.' : 'Removed from Saved.');
+  }
+
   @override
   Widget build(BuildContext context) {
     final generation = widget.generation;
+    final options = _options;
     final isOpener = generation.mode == BroMode.opener;
-    final multiple = _options.length > 1;
+    final multiple = options.length > 1;
+    final isSaved = ref.watch(savedProvider).any((s) => s.text == _option.text);
+    final busy = _busy != null;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
         Text(
           multiple
-              ? '${generation.mode.title} · ${_options.length} options · ${generation.language.label}'
-              : '${generation.mode.title} · ${toneLabel(generation.tone)} · ${generation.language.label}',
+              ? '${generation.mode.title} · ${options.length} options · ${generation.language.label}'
+              : '${generation.mode.title} · ${options.first.label} · ${generation.language.label}',
           style: AppTextStyles.caption,
         ),
         const SizedBox(height: 16),
@@ -155,43 +205,79 @@ class _ResultViewState extends State<_ResultView> {
           text: generation.context,
         ),
         const SizedBox(height: 12),
-        for (var i = 0; i < _options.length; i++) ...[
+        for (var i = 0; i < options.length; i++) ...[
           if (i > 0) const SizedBox(height: 10),
-          if (multiple)
-            _Bubble.option(
-              label: _options[i].label,
-              text: _options[i].text,
-              selected: i == _selected,
-              onTap: () => setState(() => _selected = i),
-            )
-          else
-            _Bubble.sent(text: _options[i].text),
+          AnimatedOpacity(
+            duration: AppMotion.of(context, AppMotion.fast),
+            opacity: busy && i == _selected ? 0.5 : 1,
+            child: multiple
+                ? _Bubble.option(
+                    label: options[i].label,
+                    text: options[i].text,
+                    selected: i == _selected,
+                    onTap: busy ? null : () => setState(() => _picked = i),
+                  )
+                : _Bubble.sent(text: options[i].text),
+          ),
         ],
-        if (_options[_selected].tip case final tip?) ...[
+        if (_option.tip case final tip?) ...[
           const SizedBox(height: 12),
           _TipCard(tip: tip),
         ],
-        const SizedBox(height: 6),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            multiple ? 'Tap one to pick it. Nothing is sent for you.' : 'Not sent. Copy it and send it yourself.',
-            style: AppTextStyles.caption,
-          ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: busy ? null : _edit,
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text('Edit'),
+            ),
+            TextButton.icon(
+              onPressed: _toggleSaved,
+              icon: Icon(isSaved ? Icons.star_rounded : Icons.star_outline_rounded, size: 18),
+              label: Text(isSaved ? 'Saved' : 'Save'),
+            ),
+            const Spacer(),
+            Flexible(
+              child: Text(
+                multiple ? 'Tap one to pick it.' : 'Not sent for you.',
+                textAlign: TextAlign.right,
+                style: AppTextStyles.caption,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 4),
+        Text('REWORK ${multiple ? _option.label.toUpperCase() : 'IT'}', style: AppTextStyles.title.copyWith(fontSize: 16)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final tweak in ReplyTweak.values)
+              ActionChip(
+                avatar: _busy == tweak
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(tweak.icon, size: 16),
+                label: Text(tweak.label),
+                onPressed: busy ? null : () => _tweak(tweak),
+                tooltip: '${tweak.label}: rewrite this reply',
+              ),
+          ],
+        ),
+        const SizedBox(height: 28),
         GradientButton(
-          label: multiple ? 'COPY ${_options[_selected].label.toUpperCase()}' : 'COPY',
+          label: multiple ? 'COPY ${_option.label.toUpperCase()}' : 'COPY',
           icon: Icons.copy_rounded,
           semanticsLabel: 'Copy reply',
-          onPressed: () => _copy(context),
+          onPressed: busy ? null : () => _copy(context),
         ),
         const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: widget.onRegenerate,
+                onPressed: busy ? null : widget.onRegenerate,
                 icon: const Icon(Icons.refresh_rounded),
                 label: const Text('Regenerate'),
               ),
@@ -209,6 +295,55 @@ class _ResultViewState extends State<_ResultView> {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _EditSheet extends StatefulWidget {
+  const _EditSheet({required this.initial});
+
+  final String initial;
+
+  @override
+  State<_EditSheet> createState() => _EditSheetState();
+}
+
+class _EditSheetState extends State<_EditSheet> {
+  late final TextEditingController _text = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('EDIT REPLY', style: AppTextStyles.headline),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _text,
+            autofocus: true,
+            minLines: 2,
+            maxLines: 6,
+            maxLength: 600,
+            textCapitalization: TextCapitalization.sentences,
+            style: AppTextStyles.body,
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, _text.text),
+            style: FilledButton.styleFrom(shape: const RoundedRectangleBorder(borderRadius: AppRadii.cardRadius)),
+            child: const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('Done')),
+          ),
+        ],
+      ),
     );
   }
 }

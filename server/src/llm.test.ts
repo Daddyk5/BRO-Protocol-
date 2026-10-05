@@ -97,6 +97,27 @@ test("generateReplies: DATE_IDEAS varies the date type and keeps tips", async ()
   assert.ok(replies.every((r) => r.tip === "Specific."));
 });
 
+test("ollama: tweaks rework the previous reply and honour preferences", async () => {
+  queue = ["Bold move, I respect it 😎. Coffee Saturday?"];
+  const { reply } = await ollama().generate({
+    ...input,
+    tweak: "BOLDER",
+    previous: "Coffee sometime?",
+    prefs: { emoji: false, short: true },
+  });
+  assert.equal(reply, "Bold move, I respect it.");
+  assert.match(lastBody.messages?.[0].content ?? "", /Previous reply: "Coffee sometime\?"/);
+  assert.match(lastBody.messages?.[1].content ?? "", /^Rewrite the previous reply: make it bolder/);
+});
+
+test("rate limiter reports what's left", () => {
+  const limiter = new MemoryRateLimiter(5);
+  assert.equal(limiter.status("x", 1000).remaining, 5);
+  limiter.consume("x", 3, 1000);
+  assert.deepEqual(limiter.status("x", 2000), { remaining: 2, resetAt: 1000 + limiter.windowMs });
+  limiter.close();
+});
+
 test("ollama: unreachable server maps to unavailable", async () => {
   const down = createReplyEngine({ apiKey: "", model: "x", logger: silent, ollamaUrl: "http://127.0.0.1:1" });
   await assert.rejects(down.generate(input), (e: unknown) => e instanceof ReplyError && e.code === "unavailable");
