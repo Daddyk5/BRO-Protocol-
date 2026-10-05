@@ -51,4 +51,8 @@ class MatchRepository {
   Future<void> save(MatchProfile match) => _box.put(match.id, match.toMap());
 
   Future<void> delete(String id) => _box.delete(id);
+
+  Future<void> clear() async {
+    await _box.clear();
+  }
 }

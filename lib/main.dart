@@ -10,6 +10,7 @@ import 'app.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_colors.dart';
 import 'features/history/data/generation.dart';
+import 'features/status/status_screens.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -17,13 +18,20 @@ Future<void> main() async {
 
   // With BRO_BACKEND_URL set (Docker backend) Firebase isn't used at all.
   if (!AppConstants.selfHosted) {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    // Debug builds print a debug token to logcat / the Xcode console; register
-    // it in Firebase Console → App Check → Manage debug tokens.
-    await FirebaseAppCheck.instance.activate(
-      providerAndroid: kDebugMode ? const AndroidDebugProvider() : const AndroidPlayIntegrityProvider(),
-      providerApple: kDebugMode ? const AppleDebugProvider() : const AppleAppAttestWithDeviceCheckFallbackProvider(),
-    );
+    try {
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      // Debug builds print a debug token to logcat / the Xcode console; register
+      // it in Firebase Console → App Check → Manage debug tokens.
+      await FirebaseAppCheck.instance.activate(
+        providerAndroid: kDebugMode ? const AndroidDebugProvider() : const AndroidPlayIntegrityProvider(),
+        providerApple: kDebugMode ? const AppleDebugProvider() : const AppleAppAttestWithDeviceCheckFallbackProvider(),
+      );
+    } catch (error) {
+      // A friendly screen instead of a blank one when the backend isn't set up.
+      debugPrint('Startup failed: $error');
+      runApp(SetupErrorApp(error: error));
+      return;
+    }
   }
 
   await Hive.initFlutter();

@@ -35,6 +35,11 @@ class MatchesNotifier extends Notifier<List<MatchProfile>> {
     await _repo.delete(id);
   }
 
+  Future<void> clear() async {
+    await _repo.clear();
+    state = const [];
+  }
+
   MatchProfile? byId(String? id) {
     if (id == null) return null;
     for (final m in state) {

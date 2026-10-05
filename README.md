@@ -152,12 +152,15 @@ Open `chrome://extensions`, turn on Developer mode, click **Load unpacked**, and
 ## Features
 
 **Mobile app**
+- **Onboarding:** three intro screens, then an 18+ check and agreement to the Terms and Privacy Policy. Shown on first launch, and again whenever `AppConstants.termsVersion` is bumped
 - **Modes:** Opener, Banter, Move it off-app, Revive, Late Night (smooth, slow-burn flirting), **Fix my draft** (paste what you were going to send, get it back sharper) and **Date ideas** (three date asks built from what she's mentioned: Low-key, Activity, Evening)
 - **Composer:** paste a chat or scan a screenshot (on-device OCR with ML Kit), pick who it's **for**, then generate **3 options** (Chill, Balanced, Bold) or turn that off and pick one tone
 - **Result:** tap the option you like, then Copy, Regenerate or Share. A **"Why it works"** tip explains each reply (turn it off in Settings)
 - **Matches:** save notes about each match (interests, plans, inside jokes). Pick her in the composer and replies can use one detail. Notes stay on the device and are only sent with that request
 - **History:** the last 20 replies, stored only on the device
-- **Settings:** default tone, language (English / Taglish), tips on/off, clear history
+- **Settings:** default tone, language (English / Taglish), tips on/off, Help & FAQ, Privacy Policy, Terms of Use, replay the intro, clear history, and **Delete all my data** (history, match notes, settings and install ID)
+- **Help & FAQ:** how it works, every mode, common questions, and a support contact
+- **Polish:** content is centred at 640 px on tablets, desktop and the web; a friendly "can't connect" screen replaces a blank page when the backend isn't configured; unknown links show a "Nothing here" page
 - **Android share:** in Messenger, Share a message to Bro Protocol and it opens in Banter
 
 **Extension**
@@ -203,6 +206,12 @@ assets/logo/     SVG logo (source of truth)
 tool/            renders all icons from the SVG: npm run icons
 codemagic.yaml   cloud iOS build
 ```
+
+## Before a public release
+
+- **Support email:** build with `--dart-define=SUPPORT_EMAIL=you@yourdomain.com`. It appears in Help, the Privacy Policy and the Terms. The default is a placeholder (`support@example.com`).
+- **Legal text:** the Privacy Policy and Terms in `lib/features/legal/legal_text.dart` are plain-language drafts that match what the app does today. Have them reviewed for the countries you launch in, and keep them in sync when data handling changes. App stores also want the privacy policy at a public URL.
+- **Terms changes:** bump `AppConstants.termsVersion` so every user sees onboarding and accepts again.
 
 ## Notes
 

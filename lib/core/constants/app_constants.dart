@@ -3,6 +3,16 @@ abstract final class AppConstants {
   static const String tagline = 'Say less. Say it right.';
   static const String version = '1.0.0';
 
+  /// Where users reach you. Set it per build: --dart-define=SUPPORT_EMAIL=you@yourdomain.com
+  static const String supportEmail = String.fromEnvironment('SUPPORT_EMAIL', defaultValue: 'support@example.com');
+
+  /// Bump when the Terms or Privacy Policy change materially: everyone sees
+  /// onboarding again and re-accepts.
+  static const int termsVersion = 1;
+
+  /// Content is centered at this width on tablets, desktop and the web.
+  static const double maxContentWidth = 640;
+
   /// Region the `generateReply` Cloud Function is deployed to.
   static const String functionsRegion = 'us-central1';
 

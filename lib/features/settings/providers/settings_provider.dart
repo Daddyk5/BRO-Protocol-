@@ -7,7 +7,12 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/bro_mode.dart';
 
 class AppSettings {
-  const AppSettings({required this.defaultTone, required this.language, this.showTips = true});
+  const AppSettings({
+    required this.defaultTone,
+    required this.language,
+    this.showTips = true,
+    this.onboardingDone = false,
+  });
 
   final double defaultTone;
   final AppLanguage language;
@@ -15,10 +20,15 @@ class AppSettings {
   /// Show a one-line "why this works" under each reply.
   final bool showTips;
 
-  AppSettings copyWith({double? defaultTone, AppLanguage? language, bool? showTips}) => AppSettings(
+  /// The user finished onboarding and accepted the current terms version.
+  final bool onboardingDone;
+
+  AppSettings copyWith({double? defaultTone, AppLanguage? language, bool? showTips, bool? onboardingDone}) =>
+      AppSettings(
         defaultTone: defaultTone ?? this.defaultTone,
         language: language ?? this.language,
         showTips: showTips ?? this.showTips,
+        onboardingDone: onboardingDone ?? this.onboardingDone,
       );
 }
 
@@ -27,6 +37,7 @@ abstract final class _Keys {
   static const language = 'language';
   static const deviceId = 'deviceId';
   static const showTips = 'showTips';
+  static const acceptedTerms = 'acceptedTermsVersion';
 }
 
 final settingsBoxProvider = Provider<Box<dynamic>>((ref) => Hive.box<dynamic>(HiveBoxes.settings));
@@ -43,7 +54,20 @@ class SettingsNotifier extends Notifier<AppSettings> {
       defaultTone: (box.get(_Keys.tone, defaultValue: 0.5) as num).toDouble(),
       language: AppLanguage.fromApi(box.get(_Keys.language) as String?),
       showTips: box.get(_Keys.showTips, defaultValue: true) as bool,
+      onboardingDone: (box.get(_Keys.acceptedTerms, defaultValue: 0) as int) >= AppConstants.termsVersion,
     );
+  }
+
+  Future<void> completeOnboarding() async {
+    state = state.copyWith(onboardingDone: true);
+    await _box.put(_Keys.acceptedTerms, AppConstants.termsVersion);
+  }
+
+  /// Wipes every setting, including the install ID and the terms acceptance.
+  Future<void> reset() async {
+    await _box.clear();
+    ref.invalidate(deviceIdProvider);
+    ref.invalidateSelf();
   }
 
   Future<void> setShowTips(bool value) async {

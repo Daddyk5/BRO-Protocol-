@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/bro_mode.dart';
@@ -7,7 +8,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/bro_logo.dart';
 import '../../../core/widgets/bro_snackbar.dart';
+import '../../composer/providers/composer_provider.dart';
 import '../../history/providers/history_provider.dart';
+import '../../legal/legal_text.dart';
+import '../../matches/providers/matches_provider.dart';
 import '../providers/settings_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -39,6 +43,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (confirmed != true) return;
     await ref.read(historyProvider.notifier).clear();
     if (mounted) showBroSnack(context, 'History cleared.');
+  }
+
+  Future<void> _confirmDeleteAll() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('DELETE ALL MY DATA?'),
+        content: const Text(
+          'This erases your history, match notes and settings from this device and resets your install ID. '
+          'It can\'t be undone.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Delete everything'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(historyProvider.notifier).clear();
+    await ref.read(matchesProvider.notifier).clear();
+    await ref.read(settingsProvider.notifier).reset();
+    ref.invalidate(composerProvider);
+    if (!mounted) return;
+    showBroSnack(context, 'All your data was deleted.');
+    context.go('/onboarding');
   }
 
   void _showAbout() {
@@ -136,13 +169,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onChanged: notifier.setShowTips,
               ),
             ),
+            const _SectionHeader('HELP & LEGAL'),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.help_outline_rounded),
+                    title: const Text('Help & FAQ'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push('/home/help'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: const Text('Privacy Policy'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push('/legal/${LegalDoc.privacy.name}'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.gavel_rounded),
+                    title: const Text('Terms of Use'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push('/legal/${LegalDoc.terms.name}'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.replay_rounded),
+                    title: const Text('Replay the intro'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push('/onboarding'),
+                  ),
+                ],
+              ),
+            ),
             const _SectionHeader('DATA'),
             Card(
-              child: ListTile(
-                leading: const Icon(Icons.delete_sweep_outlined),
-                title: const Text('Clear history'),
-                subtitle: const Text('Remove all saved replies from this phone'),
-                onTap: _confirmClear,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.delete_sweep_outlined),
+                    title: const Text('Clear history'),
+                    subtitle: const Text('Remove all saved replies from this device'),
+                    onTap: _confirmClear,
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.delete_forever_outlined, color: AppColors.red),
+                    title: Text('Delete all my data', style: AppTextStyles.body.copyWith(color: AppColors.red)),
+                    subtitle: const Text('History, match notes, settings and install ID'),
+                    onTap: _confirmDeleteAll,
+                  ),
+                ],
               ),
             ),
             const _SectionHeader('ABOUT'),
@@ -153,6 +231,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text('Version ${AppConstants.version}'),
                 onTap: _showAbout,
               ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Made for confident, respectful conversations.\nNothing is ever sent for you.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.caption,
             ),
           ],
         ),
