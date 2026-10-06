@@ -16,6 +16,16 @@ import 'firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Debug convenience: with no BRO_BACKEND_URL and no Firebase setup, use the
+  // local Docker backend instead of failing. Release builds never do this.
+  if (kDebugMode && !AppConstants.selfHosted && !_firebaseConfigured()) {
+    final url = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+        ? 'http://10.0.2.2:8080' // the host machine, from the Android emulator
+        : 'http://localhost:8080';
+    AppConstants.useLocalDevBackend(url);
+    debugPrint("Firebase isn't configured: using the local backend at $url");
+  }
+
   // With BRO_BACKEND_URL set (Docker backend) Firebase isn't used at all.
   if (!AppConstants.selfHosted) {
     try {
@@ -53,4 +63,14 @@ Future<void> main() async {
   );
 
   runApp(const ProviderScope(child: BroApp()));
+}
+
+/// False while lib/firebase_options.dart is still the stand-in that throws.
+bool _firebaseConfigured() {
+  try {
+    DefaultFirebaseOptions.currentPlatform;
+    return true;
+  } on UnsupportedError {
+    return false;
+  }
 }

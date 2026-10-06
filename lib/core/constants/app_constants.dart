@@ -27,7 +27,17 @@ abstract final class AppConstants {
   /// Must match the server's CLIENT_TOKEN when that is set.
   static const String broClientToken = String.fromEnvironment('BRO_CLIENT_TOKEN');
 
-  static bool get selfHosted => broBackendUrl.isNotEmpty;
+  static String? _devBackendUrl;
+
+  /// The self-hosted backend in use: BRO_BACKEND_URL, or the local dev
+  /// server picked at startup by [useLocalDevBackend].
+  static String get backendUrl => broBackendUrl.isNotEmpty ? broBackendUrl : (_devBackendUrl ?? '');
+
+  static bool get selfHosted => backendUrl.isNotEmpty;
+
+  /// Debug builds only: point at a local Docker backend when neither
+  /// BRO_BACKEND_URL nor Firebase is configured, so a plain `flutter run` works.
+  static void useLocalDevBackend(String url) => _devBackendUrl = url;
 
   static const int historyLimit = 20;
   static const int maxContextLength = 5000;

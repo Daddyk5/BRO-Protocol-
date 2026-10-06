@@ -55,7 +55,7 @@ class ApiService {
 
   String get _endpoint {
     if (AppConstants.selfHosted) {
-      return '${AppConstants.broBackendUrl.replaceAll(RegExp(r'/+$'), '')}/generateReply';
+      return '${AppConstants.backendUrl.replaceAll(RegExp(r'/+$'), '')}/generateReply';
     }
     if (AppConstants.functionsBaseUrlOverride.isNotEmpty) {
       return '${AppConstants.functionsBaseUrlOverride}/generateReply';
