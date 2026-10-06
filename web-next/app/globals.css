@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+/* Dark mode follows data-theme on <html>, set before first paint (see layout.tsx). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------------------------------------------------------------- tokens */
+:root {
+  --bg: #f6f7fa;
+  --surface: #ffffff;
+  --border: #e3e6ec;
+  --text: #12141a;
+  --muted: #5b6372;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --brand-pink: #e8336d;
+  --brand-blue: #3b5bfd;
+  --brand-gradient: linear-gradient(135deg, var(--brand-pink), var(--brand-blue));
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0b0d12;
+  --surface: #161a22;
+  --border: #262b36;
+  --text: #f2f4f8;
+  --muted: #a8b0bf;
+  --card-shadow: none; /* dark cards use borders only */
+  color-scheme: dark;
+}
+
+/* No JS: follow the OS instead of defaulting to light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #0b0d12;
+    --surface: #161a22;
+    --border: #262b36;
+    --text: #f2f4f8;
+    --muted: #a8b0bf;
+    --card-shadow: none;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-blue: var(--brand-blue);
+  --font-display: var(--font-bebas), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* ---------------------------------------------------------------- base */
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Theme switches fade instead of snapping. */
+body,
+.theme-fade {
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand-blue);
+  outline-offset: 2px;
+}
+
+.bg-brand-gradient {
+  background-image: var(--brand-gradient);
+}
+
+.card-shadow {
+  box-shadow: var(--card-shadow);
+}
+
+/* Staggered entrance for the mode cards; delay is set inline per card. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 320ms ease-out both;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Hover lift and press scale are transforms; switch them off too. */
+  .motion-card,
+  .motion-card:hover,
+  .motion-card:active {
+    transform: none !important;
+  }
+}
