@@ -43,6 +43,29 @@ export interface ReplyOption {
 export const DEFAULT_MODEL = "claude-opus-5-5";
 export const DEFAULT_OLLAMA_MODEL = "llama3.2:3b";
 
+/**
+ * Ollama tuning for small GPUs. The prompt plus a reply is ~1k tokens, so a
+ * 2k context lets a 3B model sit fully in 4 GB of VRAM instead of spilling to
+ * the CPU; keep_alive stops Ollama unloading it between requests.
+ */
+export const OLLAMA_OPTIONS = { temperature: 0.8, num_predict: 160, num_ctx: 2048 } as const;
+export const OLLAMA_KEEP_ALIVE = "30m";
+
+/** Loads [model] into memory ahead of the first request (best effort). */
+export async function warmUpOllama(ollamaUrl: string, model: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${ollamaUrl.replace(/\/+$/, "")}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model, keep_alive: OLLAMA_KEEP_ALIVE, options: { num_ctx: OLLAMA_OPTIONS.num_ctx } }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // Models that accept `output_config.effort` and server-side refusal fallbacks.
 const CURRENT_MODELS = new Set(["claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5", "claude-fable-5-1"]);
 
@@ -69,7 +92,8 @@ export function createReplyEngine({ apiKey, model, logger, ollamaUrl }: ReplyEng
             { role: "system", content: system },
             { role: "user", content: userTurn },
           ],
-          options: { temperature: 0.8, num_predict: 256 },
+          options: OLLAMA_OPTIONS,
+          keep_alive: OLLAMA_KEEP_ALIVE,
         }),
         signal: AbortSignal.timeout(90_000),
       });

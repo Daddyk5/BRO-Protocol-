@@ -67,3 +67,6 @@ functions/lib/
 # iOS packaging (codemagic.yaml)
 Payload/
 *.ipa
+
+# Backend rate-limit counters (start-backend.ps1)
+server/data/

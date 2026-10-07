@@ -7,6 +7,7 @@ import {
   type Logger,
   type ReplyEngine,
   createReplyEngine,
+  warmUpOllama,
   withFallback,
 } from "./core/llm";
 import { MemoryRateLimiter } from "./rateLimit";
@@ -44,7 +45,7 @@ const clientToken = env("CLIENT_TOKEN") ?? "";
 const server = createServer(createApp({ engine, limiter, logger, clientToken }));
 server.requestTimeout = 90_000;
 
-server.listen(port, () => {
+server.listen(port, async () => {
   logger.info("Bro Protocol server listening", {
     port,
     provider: ollama && claude ? "ollama -> anthropic" : ollama ? "ollama" : "anthropic",
@@ -53,6 +54,15 @@ server.listen(port, () => {
     rateLimitPerHour: limiter.max,
     clientTokenRequired: Boolean(clientToken),
   });
+  // Load the local model now so the first user doesn't wait for it.
+  if (ollamaUrl) {
+    const started = Date.now();
+    const ok = await warmUpOllama(ollamaUrl, ollamaModel);
+    logger.info(ok ? "Model warmed up" : "Model warm-up failed (it will load on first request)", {
+      model: ollamaModel,
+      ms: Date.now() - started,
+    });
+  }
 });
 
 function shutdown(signal: string): void {
