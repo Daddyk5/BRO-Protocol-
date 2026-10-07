@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Check, Copy, LoaderCircle, Sparkles, Star } from "lucide-react";
 
 import { generateReplies, type ReplyOption } from "@/lib/api";
+import { copyText } from "@/lib/clipboard";
 import {
   deviceId,
   newId,
@@ -211,12 +212,11 @@ function OptionCard({ option, saved, onToggleSave }: { option: ReplyOption; save
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(option.reply);
+    // Falls back to execCommand on plain-http Wi-Fi (iPhone), where the
+    // Clipboard API isn't available. If both fail, the text stays selectable.
+    if (await copyText(option.reply)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* clipboard blocked: the text is selectable */
     }
   };
 

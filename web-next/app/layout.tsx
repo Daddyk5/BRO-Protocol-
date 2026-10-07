@@ -13,12 +13,15 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "sw
 export const metadata: Metadata = {
   title: "Bro Protocol",
   description: "An AI wingman that writes dating-chat replies. Say less. Say it right.",
-  icons: { icon: "/logo.svg" },
+  icons: { icon: "/logo.svg", apple: "/apple-touch-icon.png" },
+  // "Add to Home Screen" on iPhone opens full-screen, like an installed app.
+  appleWebApp: { capable: true, title: "Bro Protocol", statusBarStyle: "black" },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover", // lets the bottom tab bar respect the iPhone home indicator
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F6F7FA" },
     { media: "(prefers-color-scheme: dark)", color: "#0B0D12" },
