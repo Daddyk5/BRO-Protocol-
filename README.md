@@ -10,8 +10,27 @@ An AI wingman that writes one dating-chat reply at a time: confident, warm, witt
 | Backend (pick one) | `server/` or `functions/` | Docker (Node) or Firebase Cloud Functions v2. Both TypeScript and Claude API, sharing the same logic |
 | Chrome extension | `extension/` | Manifest V3, TypeScript, Vite |
 
+## Screenshots
+
+Web app (`web-next/`), dark and light:
+
+| Home, dark | Home, light |
+| --- | --- |
+| ![Home screen in dark mode](docs/screenshots/home-desktop-dark.png) | ![Home screen in light mode](docs/screenshots/home-desktop-light.png) |
+
+On a phone (360px), with the bottom tab bar:
+
+| Home, dark | Home, light | Settings |
+| --- | --- | --- |
+| <img src="docs/screenshots/home-mobile-dark.png" alt="Home on a phone, dark" width="240"> | <img src="docs/screenshots/home-mobile-light.png" alt="Home on a phone, light" width="240"> | <img src="docs/screenshots/settings-mobile-dark.png" alt="Theme setting on a phone" width="240"> |
+
+Composer (Late Night):
+
+![Composer in Late Night mode](docs/screenshots/compose-desktop-dark.png)
+
 ## Contents
 
+- [Screenshots](#screenshots)
 - [Requirements](#requirements)
 - [Quick start (Docker backend + Android)](#quick-start-docker-backend--android)
 - [Run on iPhone without a Mac](#run-on-iphone-without-a-mac)
