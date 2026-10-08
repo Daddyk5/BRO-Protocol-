@@ -4,6 +4,7 @@ import { Bebas_Neue, Inter } from "next/font/google";
 import { BottomNav } from "@/components/BottomNav";
 import { Header } from "@/components/Header";
 import { ThemeProvider, themeInitScript } from "@/components/ThemeProvider";
+import { WelcomeSplash, welcomeInitScript } from "@/components/WelcomeSplash";
 
 import "./globals.css";
 
@@ -33,9 +34,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // data-theme is set by the inline script before React hydrates.
     <html lang="en" className={`${bebas.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript + welcomeInitScript }} />
       </head>
       <body className="min-h-dvh">
+        <WelcomeSplash />
         <ThemeProvider>
           <a
             href="#main"

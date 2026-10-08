@@ -15,7 +15,8 @@ export interface GenerateInput {
   notes?: string;
 }
 
-const BASE = (process.env.NEXT_PUBLIC_BRO_BACKEND_URL || "http://localhost:8080").replace(/\/+$/, "");
+// Same-origin proxy by default (see next.config.ts); set the env var to call a backend directly.
+const BASE = (process.env.NEXT_PUBLIC_BRO_BACKEND_URL || "/api/bro").replace(/\/+$/, "");
 const CLIENT_TOKEN = process.env.NEXT_PUBLIC_BRO_CLIENT_TOKEN || "";
 
 /** Calls the Bro Protocol backend (same contract as the mobile app). */
